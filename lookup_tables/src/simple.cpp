@@ -20,6 +20,10 @@
 //    In: Proc.  11th IEEE Internat. Conf. on Pattern Recognition, ICPR 1992, 
 //    pp. 232–235 (1992)
 
+// William Silversmith, August 2026
+// Princeton Neuroscience Institute
+// BSD-3 License
+
 #include <cstdio>
 #include <cstdint>
 
