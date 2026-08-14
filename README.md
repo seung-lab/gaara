@@ -9,6 +9,8 @@ Gaara attempts to be an efficient voxel thinning algorithm implementation that c
 
 ## References
 
-[1] K. Palágyi et al., “A Sequential 3D Thinning Algorithm and Its Medical Applications,” in Information Processing in Medical Imaging, M. F. Insana and R. M. Leahy, Eds., Berlin, Heidelberg: Springer, 2001, pp. 409–415. doi: 10.1007/3-540-45729-1_42.
-[2] B. Matejek, D. Wei, X. Wang, J. Zhao, K. Palágyi, and H. Pfister, “Synapse-Aware Skeleton Generation for Neural Circuits,” in Medical Image Computing and Computer Assisted Intervention – MICCAI 2019, D. Shen, T. Liu, T. M. Peters, L. H. Staib, C. Essert, S. Zhou, P.-T. Yap, and A. Khan, Eds., Cham: Springer International Publishing, 2019, pp. 227–235. doi: 10.1007/978-3-030-32239-7_26.
-[3] T. A. Syed, M. Youssef, A. L. Schober, Y. Kubota, K. K. Murai, and C. K. Salmon, “Beyond Neurons: Computer Vision Methods for Analysis of Morphologically Complex Astrocytes,” Frontiers in Computer Science, vol. 6, Sep. 2024, doi: 10.3389/fcomp.2024.1156204.
+1. K. Palágyi et al., “A Sequential 3D Thinning Algorithm and Its Medical Applications,” in Information Processing in Medical Imaging, M. F. Insana and R. M. Leahy, Eds., Berlin, Heidelberg: Springer, 2001, pp. 409–415. doi: 10.1007/3-540-45729-1_42.  
+
+2. B. Matejek, D. Wei, X. Wang, J. Zhao, K. Palágyi, and H. Pfister, “Synapse-Aware Skeleton Generation for Neural Circuits,” in Medical Image Computing and Computer Assisted Intervention – MICCAI 2019, D. Shen, T. Liu, T. M. Peters, L. H. Staib, C. Essert, S. Zhou, P.-T. Yap, and A. Khan, Eds., Cham: Springer International Publishing, 2019, pp. 227–235. doi: 10.1007/978-3-030-32239-7_26.  
+
+3. T. A. Syed, M. Youssef, A. L. Schober, Y. Kubota, K. K. Murai, and C. K. Salmon, “Beyond Neurons: Computer Vision Methods for Analysis of Morphologically Complex Astrocytes,” Frontiers in Computer Science, vol. 6, Sep. 2024, doi: 10.3389/fcomp.2024.1156204.  
