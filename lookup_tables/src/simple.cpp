@@ -117,16 +117,6 @@ uint8_t* compute_oracle() {
 		// N*_26(p) has 1 connected component
 		const bool condition_1 = N == 1;
 
-		// N_6(p)\B has at least one bg point
-		const bool condition_2 = (
-			   (stencil[4] == 0)
-			|| (stencil[10] == 0)
-			|| (stencil[12] == 0)
-			|| (stencil[14] == 0)
-			|| (stencil[16] == 0)
-			|| (stencil[22] == 0)
-		);
-
 		// z = 0
 		// 0 1 2 ; x axis
 		// 3 4 5
@@ -142,9 +132,22 @@ uint8_t* compute_oracle() {
 		// 21 22 23
 		// 24 25 26
 
+		const int num_6_bg = (
+			(stencil[4] == 0)
+			+ (stencil[10] == 0)
+			+ (stencil[12] == 0)
+			+ (stencil[14] == 0)
+			+ (stencil[16] == 0)
+			+ (stencil[22] == 0)
+		);
+
+		// N_6(p)\B has at least one bg point
+		const bool condition_2 = num_6_bg > 0;		
+
 		// N_6(p)\B has at least two points 18-connected
 		const bool condition_3 = (
-			(
+			(num_6_bg == 1)
+			|| (
 				((stencil[4] == 0) || (stencil[22] == 0)) 
 				&& (
 					   (stencil[10] == 0)
