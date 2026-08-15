@@ -22,6 +22,8 @@ If needed, adjust the C++ compiler in the Makefile. This will run and generate t
 
 Each file is a bit packed yes (1)/no (0) answer to the question: is this configuration simple or complex?
 
+Note that while endpoints may be technically simple, to avoid an additional check, we classify them as not simple.
+
 Given a 3x3x3 mask represented as an array in xyz Fortran order, you can compute i as the bitfield corresponding to whether each voxel is foreground or background, with the 14th to 25th bits inclusive shifted right one unit (as the central pixel is not considered).
 
 This is pseudocode, actually iterating over your real image may be more complex.

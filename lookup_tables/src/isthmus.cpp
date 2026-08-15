@@ -121,7 +121,7 @@ uint8_t* compute_oracle() {
 }
 
 void write_packed_oracle(uint8_t* oracle) {
-	const char* filename = "output/isthmus.bin";
+	const char* filename = "tables/isthmus.bin";
 
 	FILE* file = fopen(filename, "wb");
     if (!file) {

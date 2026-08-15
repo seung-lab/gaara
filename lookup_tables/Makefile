@@ -2,7 +2,7 @@ CXX = clang++  # or g++, or any other C++ compiler
 CXXFLAGS = -O3
 
 all: simple isthmus
-	@mkdir -p bin output
+	@mkdir -p bin tables
 	@echo "Running programs..."
 	./bin/simple
 	./bin/isthmus
@@ -15,4 +15,4 @@ isthmus: src/isthmus.cpp
 
 clean:
 	rm bin/simple bin/isthmus
-	rm output/*.bin
+	rm tables/*.bin

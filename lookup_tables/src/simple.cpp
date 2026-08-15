@@ -180,7 +180,7 @@ uint8_t* compute_oracle() {
 }
 
 void write_packed_oracle(uint8_t* oracle) {
-	const char* filename = "output/simple.bin";
+	const char* filename = "tables/simple.bin";
 
 	FILE* file = fopen(filename, "wb");
     if (!file) {
