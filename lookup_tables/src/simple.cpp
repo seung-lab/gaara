@@ -7,6 +7,10 @@
 // 3. At least two background points the 6-connected neighborhood must touch on their
 //    edges (be 18-connected).
 //
+// Endpoints are considered "not simple" regardless of the above definition.
+// An endpoint consists of a 3x3x3 stencil around point p that contains exactly
+// one foreground voxel.
+//
 // This will generate 2^26 different permutations, which can be bit packed
 // into 8,388,608 bytes which can be saved into a compressible data file.
 
@@ -28,7 +32,6 @@
 #include <cstdint>
 
 #include "cc3d.hpp"
-
 
 // map for i variable (skip center to save space)
 
@@ -170,8 +173,14 @@ uint8_t* compute_oracle() {
 			)
 		);
 
-		oracle[i] = (uint8_t)(condition_1 && condition_2 && condition_3);
+		int num_foreground = 0;
+		for (int j = 0; j < 27; j++) {
+			num_foreground += stencil[j] > 0;
+		}
 
+		const bool is_endpoint = (num_foreground == 1);
+
+		oracle[i] = (uint8_t)(!is_endpoint && condition_1 && condition_2 && condition_3);
 	}
 
 	delete[] out_labels;
