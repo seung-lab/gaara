@@ -142,7 +142,7 @@ uint8_t* bit_pack_file(uint8_t* oracle) {
 	for (int i = 0, pi = 0; i < SIZE; i += 8, pi++) {
 		uint8_t packed_word = 0;
 		for (int j = 0; j < 8; j++) {
-			packed_word |= (oracle[i] << j);
+			packed_word |= (oracle[i+j] << j);
 		}
 		packed_oracle[pi] = packed_word;
 	}
