@@ -368,6 +368,10 @@ void thin_palagyi(
 	std::list<Voxel> border_points = find_border_points(labels, sx, sy, sz);
 	std::deque<DeletableEntry> potentially_deletable;
 
+	if (border_points.size() == 0) {
+		return;
+	}
+
 	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
 
 	BorderCheckFn direction_map[6] = {
