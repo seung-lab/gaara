@@ -22,7 +22,7 @@ struct PackedLookupTable {
 public:
     uint8_t* m_lut_data;
     uint64_t m_size;
-    const uint64_t k_max_size = 1 << 26;
+    const uint64_t k_max_size = (1 << 26) >> 3;
 
 public:
     PackedLookupTable(const char* filename) {
