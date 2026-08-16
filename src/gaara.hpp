@@ -95,6 +95,7 @@ struct Voxel {
 // y
 // axis
 
+template <bool Interior>
 uint32_t foreground_configuration(
 	uint8_t* labels, 
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
@@ -104,47 +105,88 @@ uint32_t foreground_configuration(
 	const uint64_t sxy = sx * sy;
 	const uint64_t loc = x + sx * (y + sy * z);
 
-	const bool ltx = x < sx-1;
-	const bool lty = y < sy-1;
-	const bool ltz = z < sz-1;
+    if constexpr (Interior) {
+		// z = -1
+		index |= (labels[loc-1-sx-sxy] > 0);
+		index |= (labels[loc-sx-sxy] > 0) << 1;
+		index |= (labels[loc+1-sx-sxy] > 0) << 2;
+		
+		index |= (labels[loc-1-sxy] > 0) << 3;
+		index |= (labels[loc-sxy] > 0) << 4;
+		index |= (labels[loc+1-sxy] > 0) << 5;
 
-	// z = -1
-	index |= (x > 0) && (y > 0) && (z > 0) && (labels[loc-1-sx-sxy] > 0);
-	index |= ((y > 0) && (z > 0) && (labels[loc-sx-sxy] > 0)) << 1;
-	index |= (ltx && (y > 0) && (z > 0) && (labels[loc+1-sx-sxy] > 0)) << 2;
-	
-	index |= ((x > 0) && (z > 0) && (labels[loc-1-sxy] > 0)) << 3;
-	index |= ((z > 0) && (labels[loc-sxy] > 0)) << 4;
-	index |= (ltx && (z > 0) && (labels[loc+1-sxy] > 0)) << 5;
+		index |= (labels[loc-1+sx-sxy] > 0) << 6;
+		index |= (labels[loc+sx-sxy] > 0) << 7;
+		index |= (labels[loc+1+sx-sxy] > 0) << 8;
+		
+		// z = 0
+		index |= (labels[loc-1-sx] > 0) << 9;
+		index |= (labels[loc-sx] > 0) << 10;
+		index |= (labels[loc+1-sx] > 0) << 11;
 
-	index |= ((x > 0) && lty && (z > 0) && (labels[loc-1+sx-sxy] > 0)) << 6;
-	index |= (lty && (z > 0) && (labels[loc+sx-sxy] > 0)) << 7;
-	index |= (ltx && lty && (z > 0) && (labels[loc+1+sx-sxy] > 0)) << 8;
-	
-	// z = 0
-	index |= ((x > 0) && (y > 0) && (labels[loc-1-sx] > 0)) << 9;
-	index |= ((y > 0) && (labels[loc-sx] > 0)) << 10;
-	index |= (ltx && (y > 0) && (labels[loc+1-sx] > 0)) << 11;
+		index |= (labels[loc-1] > 0) << 12;
+		index |= (labels[loc+1] > 0) << 13;
 
-	index |= ((x > 0) && (labels[loc-1] > 0)) << 12;
-	index |= (ltx && (labels[loc+1] > 0)) << 13;
+		index |= (labels[loc-1+sx] > 0) << 14;
+		index |= (labels[loc+sx] > 0) << 15;
+		index |= (labels[loc+1+sx] > 0) << 16;
 
-	index |= ((x > 0) && lty && (labels[loc-1+sx] > 0)) << 14;
-	index |= (lty && (labels[loc+sx] > 0)) << 15;
-	index |= (ltx && lty && (labels[loc+1+sx] > 0)) << 16;
+		// z = +1
+		index |= (labels[loc-1-sx+sxy] > 0) << 17;
+		index |= (labels[loc-sx+sxy] > 0) << 18;
+		index |= (labels[loc+1-sx+sxy] > 0) << 19;
 
-	// z = +1
-	index |= ((x > 0) && (y > 0) && ltz && (labels[loc-1-sx+sxy] > 0)) << 17;
-	index |= ((y > 0) && ltz && (labels[loc-sx+sxy] > 0)) << 18;
-	index |= (ltx && (y > 0) && ltz && (labels[loc+1-sx+sxy] > 0)) << 19;
+		index |= (labels[loc-1+sxy] > 0) << 20;
+		index |= (labels[loc+sxy] > 0) << 21;
+		index |= (labels[loc+1+sxy] > 0) << 22;
 
-	index |= ((x > 0) && ltz && (labels[loc-1+sxy] > 0)) << 20;
-	index |= (ltz && (labels[loc+sxy] > 0)) << 21;
-	index |= (ltx && ltz && (labels[loc+1+sxy] > 0)) << 22;
+		index |= (labels[loc-1+sx+sxy] > 0) << 23;
+		index |= (labels[loc+sx+sxy] > 0) << 24;
+		index |= (labels[loc+1+sx+sxy] > 0) << 25;
+    }
+    else {
+		const bool ltx = x < sx-1;
+		const bool lty = y < sy-1;
+		const bool ltz = z < sz-1;
 
-	index |= ((x > 0) && lty && ltz && (labels[loc-1+sx+sxy] > 0)) << 23;
-	index |= (lty && ltz && (labels[loc+sx+sxy] > 0)) << 24;
-	index |= (ltx && lty && ltz && (labels[loc+1+sx+sxy] > 0)) << 25;
+		// z = -1
+		index |= (x > 0) && (y > 0) && (z > 0) && (labels[loc-1-sx-sxy] > 0);
+		index |= ((y > 0) && (z > 0) && (labels[loc-sx-sxy] > 0)) << 1;
+		index |= (ltx && (y > 0) && (z > 0) && (labels[loc+1-sx-sxy] > 0)) << 2;
+		
+		index |= ((x > 0) && (z > 0) && (labels[loc-1-sxy] > 0)) << 3;
+		index |= ((z > 0) && (labels[loc-sxy] > 0)) << 4;
+		index |= (ltx && (z > 0) && (labels[loc+1-sxy] > 0)) << 5;
+
+		index |= ((x > 0) && lty && (z > 0) && (labels[loc-1+sx-sxy] > 0)) << 6;
+		index |= (lty && (z > 0) && (labels[loc+sx-sxy] > 0)) << 7;
+		index |= (ltx && lty && (z > 0) && (labels[loc+1+sx-sxy] > 0)) << 8;
+		
+		// z = 0
+		index |= ((x > 0) && (y > 0) && (labels[loc-1-sx] > 0)) << 9;
+		index |= ((y > 0) && (labels[loc-sx] > 0)) << 10;
+		index |= (ltx && (y > 0) && (labels[loc+1-sx] > 0)) << 11;
+
+		index |= ((x > 0) && (labels[loc-1] > 0)) << 12;
+		index |= (ltx && (labels[loc+1] > 0)) << 13;
+
+		index |= ((x > 0) && lty && (labels[loc-1+sx] > 0)) << 14;
+		index |= (lty && (labels[loc+sx] > 0)) << 15;
+		index |= (ltx && lty && (labels[loc+1+sx] > 0)) << 16;
+
+		// z = +1
+		index |= ((x > 0) && (y > 0) && ltz && (labels[loc-1-sx+sxy] > 0)) << 17;
+		index |= ((y > 0) && ltz && (labels[loc-sx+sxy] > 0)) << 18;
+		index |= (ltx && (y > 0) && ltz && (labels[loc+1-sx+sxy] > 0)) << 19;
+
+		index |= ((x > 0) && ltz && (labels[loc-1+sxy] > 0)) << 20;
+		index |= (ltz && (labels[loc+sxy] > 0)) << 21;
+		index |= (ltx && ltz && (labels[loc+1+sxy] > 0)) << 22;
+
+		index |= ((x > 0) && lty && ltz && (labels[loc-1+sx+sxy] > 0)) << 23;
+		index |= (lty && ltz && (labels[loc+sx+sxy] > 0)) << 24;
+		index |= (ltx && lty && ltz && (labels[loc+1+sx+sxy] > 0)) << 25;
+	}
 
 	return index;
 }
@@ -411,7 +453,12 @@ void thin_palagyi(
 				continue;
 			}
 
-			const uint32_t config = foreground_configuration(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+			const bool interior = (pt.x > 0 && pt.x < sx - 1 && pt.y > 0 && pt.y < sy - 1 && pt.z > 0 && pt.z < sz - 1);
+
+			const uint32_t config = interior
+				? foreground_configuration<true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
+				: foreground_configuration<false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+
 			const bool is_directionally_border = border_check_fn(pt, loc);
 
 			if (is_directionally_border && simple_lut[config]) {
