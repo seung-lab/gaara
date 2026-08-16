@@ -230,7 +230,7 @@ auto find_border_points(
 			(xi >= 0 && xi < sx)
 		 && (((zi >= sz - 1)) || (zi < sz - 1 && labels[loc+sxy] != PointStatus::BACKGROUND))
 		 && (((yi == 0 || zi >= sz - 1)) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != PointStatus::BACKGROUND))
-		 && (((yi >= sy - 1 || sz >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
+		 && (((yi >= sy - 1 || zi >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
 		));
 	};
 
