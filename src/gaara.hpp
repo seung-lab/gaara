@@ -344,9 +344,6 @@ auto find_border_points(
 					stale_stencil = 0;
 
 					if (!pure_right) {
-						x += 2;
-						stale_stencil = 3;
-
 						labels[loc] = PointStatus::BORDER;
 						border_points.emplace_back(x,y,z);
 						
@@ -355,14 +352,16 @@ auto find_border_points(
 							border_points.emplace_back(x+1,y,z);
 						}
 
+						x += 2;
+						stale_stencil = 3;
+
 						continue;
 					}
 					else if (!pure_middle) {
-						x++;
-						stale_stencil = 2;
-
 						labels[loc] = PointStatus::BORDER;
 						border_points.emplace_back(x,y,z);
+						x++;
+						stale_stencil = 2;
 						continue;
 					}
 					else if (!pure_left) {
