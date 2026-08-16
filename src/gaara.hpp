@@ -142,9 +142,9 @@ uint32_t foreground_configuration(
 	index |= (ltz && (labels[loc+sxy] > 0)) << 21;
 	index |= (ltx && ltz && (labels[loc+1+sxy] > 0)) << 22;
 
-	index |= ((x > 0) && (y > 0) && ltz && (labels[loc-1-sx+sxy] > 0)) << 23;
-	index |= ((y > 0) && ltz && (labels[loc+sx+sxy] > 0)) << 24;
-	index |= (ltx && (y > 0) && ltz && (labels[loc+1+sx+sxy] > 0)) << 25;
+	index |= ((x > 0) && lty && ltz && (labels[loc-1+sx+sxy] > 0)) << 23;
+	index |= (lty && ltz && (labels[loc+sx+sxy] > 0)) << 24;
+	index |= (ltx && lty && ltz && (labels[loc+1+sx+sxy] > 0)) << 25;
 
 	return index;
 }
