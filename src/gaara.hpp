@@ -22,6 +22,7 @@ struct PackedLookupTable {
 public:
     uint8_t* m_lut_data;
     uint64_t m_size;
+    uint64_t m_num_entries;
     const uint64_t k_max_size = (1 << 26) >> 3;
 
 public:
@@ -36,6 +37,8 @@ public:
         if (m_size < 0 || m_size != k_max_size) {
             throw std::runtime_error("Incorrect file size for lookup table.");
         }
+
+        m_num_entries = m_size << 3;
 
         file.seekg(0, std::ios::beg);
 
@@ -54,7 +57,7 @@ public:
     }
 
     bool operator[](const uint64_t index) const {
-    	if (index >= m_size) { 
+    	if (index >= m_num_entries) { 
     		return false; 
     	}
     	const uint64_t offset = index >> 3;
