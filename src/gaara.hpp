@@ -326,8 +326,7 @@ auto find_border_points(
 					uint64_t loc = x + sx * (y + sy * z);
 
 					if (labels[loc] == PointStatus::BACKGROUND) {
-						x++;
-						stale_stencil += 2;
+						stale_stencil++;
 						continue;
 					}
 
@@ -347,9 +346,13 @@ auto find_border_points(
 						labels[loc] = PointStatus::BORDER;
 						border_points.emplace_back(x,y,z);
 						
-						if (x < sx - 1 && labels[loc+1] != PointStatus::BACKGROUND) {
+						if (x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
 							labels[loc+1] = PointStatus::BORDER;
 							border_points.emplace_back(x+1,y,z);
+						}
+						if (x < sx - 2 && labels[loc+2] == PointStatus::FOREGROUND) {
+							labels[loc+2] = PointStatus::BORDER;
+							border_points.emplace_back(x+2,y,z);
 						}
 
 						x += 2;
@@ -360,6 +363,12 @@ auto find_border_points(
 					else if (!pure_middle) {
 						labels[loc] = PointStatus::BORDER;
 						border_points.emplace_back(x,y,z);
+
+						if (x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
+							labels[loc+1] = PointStatus::BORDER;
+							border_points.emplace_back(x+1,y,z);
+						}
+
 						x++;
 						stale_stencil = 2;
 						continue;
