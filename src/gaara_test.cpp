@@ -41,4 +41,8 @@ TEST(Gaara, TestFindBorderPoints) {
 	border_points = gaara::find_border_points(image.data(), sx, sy, sz);
 
 	EXPECT_EQ(border_points.size(), sx * sy * sz - (sx-2) * (sy-2) * (sz-2));
+
+	border_points = gaara::find_border_points(image.data(), sx, sy, sz, false);
+
+	EXPECT_EQ(border_points.size(), 0);
 }
