@@ -196,7 +196,8 @@ uint32_t foreground_configuration(
 
 auto find_border_points(
 	uint8_t* labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool erode_border = true
 ) {
 
 	// assume a 3x3x3 stencil with all voxels on
@@ -207,18 +208,34 @@ auto find_border_points(
 	) {
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
-		return static_cast<bool>(labels[loc] && (
-			(xi >= 0 && xi < sx)
-			&& (labels[loc] != PointStatus::BACKGROUND)
-			&& ((yi == 0) || (yi > 0 && labels[loc-sx] != PointStatus::BACKGROUND))
-			&& ((yi >= sy - 1) || (yi < sy - 1 && labels[loc+sx] != PointStatus::BACKGROUND))
-			&& ((zi == 0) || (zi > 0 && labels[loc-sxy] != PointStatus::BACKGROUND))
-			&& ((zi >= sz - 1) || (zi < sz - 1 && labels[loc+sxy] != PointStatus::BACKGROUND))
-			&& ((yi == 0 || zi == 0) || (yi > 0 && zi > 0 && labels[loc-sx-sxy] != PointStatus::BACKGROUND))
-			&& ((yi >= sy - 1 || zi == 0) || (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != PointStatus::BACKGROUND))
-			&& ((yi == 0 || zi >= sz - 1) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != PointStatus::BACKGROUND))
-			&& ((yi >= sy - 1 || zi >= sz - 1) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
-		));
+		if (erode_border) {
+			return static_cast<bool>(
+				(xi >= 0 && xi < sx && yi > 0 && yi < sy - 1 && zi > 0 && zi < sz - 1)
+				&& (labels[loc] != PointStatus::BACKGROUND)
+				&& (labels[loc-sx] != PointStatus::BACKGROUND)
+				&& (labels[loc+sx] != PointStatus::BACKGROUND)
+				&& (labels[loc-sxy] != PointStatus::BACKGROUND)
+				&& (labels[loc+sxy] != PointStatus::BACKGROUND)
+				&& (labels[loc-sx-sxy] != PointStatus::BACKGROUND)
+				&& (labels[loc+sx-sxy] != PointStatus::BACKGROUND)
+				&& (labels[loc-sx+sxy] != PointStatus::BACKGROUND)
+				&& (labels[loc+sx+sxy] != PointStatus::BACKGROUND)
+			);
+		}
+		else {
+			return static_cast<bool>(
+				(xi >= 0 && xi < sx)
+				&& (labels[loc] != PointStatus::BACKGROUND)
+				&& ((yi == 0) || (yi > 0 && labels[loc-sx] != PointStatus::BACKGROUND))
+				&& ((yi >= sy - 1) || (yi < sy - 1 && labels[loc+sx] != PointStatus::BACKGROUND))
+				&& ((zi == 0) || (zi > 0 && labels[loc-sxy] != PointStatus::BACKGROUND))
+				&& ((zi >= sz - 1) || (zi < sz - 1 && labels[loc+sxy] != PointStatus::BACKGROUND))
+				&& ((yi == 0 || zi == 0) || (yi > 0 && zi > 0 && labels[loc-sx-sxy] != PointStatus::BACKGROUND))
+				&& ((yi >= sy - 1 || zi == 0) || (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] != PointStatus::BACKGROUND))
+				&& ((yi == 0 || zi >= sz - 1) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != PointStatus::BACKGROUND))
+				&& ((yi >= sy - 1 || zi >= sz - 1) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
+			);
+		}
 	};
 
 	auto is_pure_fast_z = [&](
@@ -226,26 +243,45 @@ auto find_border_points(
 	) {
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
-		return static_cast<bool>(labels[loc] && (
-			(xi >= 0 && xi < sx)
-		 && (((zi >= sz - 1)) || (zi < sz - 1 && labels[loc+sxy] != PointStatus::BACKGROUND))
-		 && (((yi == 0 || zi >= sz - 1)) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != PointStatus::BACKGROUND))
-		 && (((yi >= sy - 1 || zi >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
-		));
+		if (erode_border) {
+			return static_cast<bool>(
+					(xi >= 0 && xi < sx && yi > 0 && yi < sy - 1 && zi < sz - 1)
+				 && (labels[loc+sxy] != PointStatus::BACKGROUND)
+				 && (labels[loc-sx+sxy] != PointStatus::BACKGROUND)
+				 && (labels[loc+sx+sxy] != PointStatus::BACKGROUND)
+			);
+		}
+		else {
+			return static_cast<bool>(
+				(xi >= 0 && xi < sx)
+			 && ((zi >= sz - 1) || (zi < sz - 1 && labels[loc+sxy] != PointStatus::BACKGROUND))
+			 && ((yi == 0 || zi >= sz - 1) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != PointStatus::BACKGROUND))
+			 && ((yi >= sy - 1 || zi >= sz - 1) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
+			);
+		}
 	};
 
 	auto is_pure_fast_y = [&](
 		const uint64_t xi, const uint64_t yi, const uint64_t zi
 	) {
-
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
-		return static_cast<bool>(labels[loc] && (
-			    (xi >= 0 && xi < sx)
-			&& (((yi >= sy - 1)) || (yi < sy - 1 && labels[loc+sx] != PointStatus::BACKGROUND))
-			&& (((yi >= sy - 1 || zi == 0)) || (yi < sy - 1 && zi > 0 && labels[loc+sx-sxy] != PointStatus::BACKGROUND))
-			&& (((yi >= sy - 1 || zi >= sz - 1)) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND)))
-		);
+		if (erode_border) {
+			return static_cast<bool>(
+				    (xi >= 0 && xi < sx && yi < sy - 1 && zi > 0 && zi < sz - 1)
+				&& (labels[loc+sx] != PointStatus::BACKGROUND)
+				&& (labels[loc+sx-sxy] != PointStatus::BACKGROUND)
+				&& (labels[loc+sx+sxy] != PointStatus::BACKGROUND)
+			);
+		}
+		else {
+			return static_cast<bool>(
+				    (xi >= 0 && xi < sx)
+				&& ((yi >= sy - 1) || (yi < sy - 1 && labels[loc+sx] != PointStatus::BACKGROUND))
+				&& (((yi >= sy - 1 || zi == 0)) || (yi < sy - 1 && zi > 0 && labels[loc+sx-sxy] != PointStatus::BACKGROUND))
+				&& ((yi >= sy - 1 || zi >= sz - 1) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
+			);
+		}
 	};
 
 	auto process_block = [&](
@@ -297,7 +333,7 @@ auto find_border_points(
 			pure_right = is_pure(x+1,y,z);\
 		}\
 		else {\
-			pure_right = pure_middle;\
+			pure_right = !erode_border;\
 		}\
 	}\
 	else if (stale_stencil >= 3) {\
@@ -305,7 +341,7 @@ auto find_border_points(
 			pure_right = is_pure(x+1,y,z);\
 		}\
 		else {\
-			pure_right = pure_middle;\
+			pure_right = !erode_border;\
 		}\
 		if (!pure_right) {\
 			NOT_PURE_RIGHT()\
@@ -318,7 +354,7 @@ auto find_border_points(
 			pure_left = is_pure(x-1,y,z);\
 		}\
 		else {\
-			pure_left = pure_middle;\
+			pure_left = !erode_border;\
 		}\
 	}\
 	else if (stale_stencil == 2) {\
@@ -332,7 +368,7 @@ auto find_border_points(
 		}\
 		else {\
 			pure_middle = is_pure(x,y,z);\
-			pure_right = pure_middle;\
+			pure_right = !erode_border;\
 			if (!pure_right) {\
 				NOT_PURE_RIGHT()\
 			}\
@@ -379,7 +415,6 @@ auto find_border_points(
 				}
 			}
 		}
-
 		return border_points;
 	};
 
