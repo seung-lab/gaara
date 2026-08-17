@@ -65,5 +65,109 @@ TEST(Gaara, TestSimplePointLUT) {
 
 }
 
+TEST(Gaara, TestTorusSmall) {
+
+	int sz = 3;
+	int sy = 5;
+	int sx = 5;
+	int voxels = sx * sy * sz;
+
+	std::vector<uint8_t> torus = {
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+
+		0, 0, 0, 0, 0,
+		0, 1, 1, 1, 0,
+		0, 1, 0, 1, 0,
+		0, 1, 1, 1, 0,
+		0, 0, 0, 0, 0,
+
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0
+	};
+
+	gaara::thin_palagyi(torus.data(), sx, sy, sz);
+
+	int num_foreground = 0;
+	for (int i = 0; i < voxels; i++) {
+		num_foreground += torus[i] > 0;
+	}
+
+	EXPECT_EQ(num_foreground, 4);
+
+	gaara::thin_palagyi(torus.data(), sx, sy, sz);
+
+	num_foreground = 0;
+	for (int i = 0; i < voxels; i++) {
+		num_foreground += torus[i] > 0;
+	}
+
+	EXPECT_EQ(num_foreground, 4); // idempotent at this point
+}
+
+TEST(Gaara, TestTorusSmallDoubleThick) {
+	int sz = 3;
+	int sy = 7;
+	int sx = 7;
+	int voxels = sx * sy * sz;
+
+	std::vector<uint8_t> torus = {
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+
+		0, 0, 0, 0, 0, 0, 0,
+		0, 1, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 1, 0,
+		0, 1, 1, 0, 1, 1, 0,
+		0, 1, 1, 1, 1, 1, 0,
+		0, 1, 1, 1, 1, 1, 0,
+		0, 0, 0, 0, 0, 0, 0,
+
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0
+	};
+
+	gaara::thin_palagyi(torus.data(), sx, sy, sz);
+
+	// for (uint64_t y = 0; y < sy; y++) {
+	// 	for (uint64_t x = 0; x < sx; x++) {
+	// 		printf("%d ", torus[x + sx * y + sx * sy * 1]);
+	// 	}
+	// 	printf("\n");
+	// }
+
+
+	int num_foreground = 0;
+	for (int i = 0; i < voxels; i++) {
+		num_foreground += torus[i] > 0;
+	}
+
+	EXPECT_EQ(num_foreground, 7);
+
+	gaara::thin_palagyi(torus.data(), sx, sy, sz);
+
+	num_foreground = 0;
+	for (int i = 0; i < voxels; i++) {
+		num_foreground += torus[i] > 0;
+	}
+
+	EXPECT_EQ(num_foreground, 7); // idempotent at this point
+}
 
 
