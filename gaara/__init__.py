@@ -1,7 +1,9 @@
 import numpy as np
-import numpy.types as npt
+import numpy.typing as npt
 
-import fastgaara
+from . import fastgaara
+
+__all__ = ["thin_palagyi"]
 
 def thin_palagyi(labels:npt.NDArray[np.uint8], in_place:bool = False) -> npt.NDArray[np.uint8]:
 	"""
