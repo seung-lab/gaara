@@ -1,0 +1,10 @@
+[build-system]
+requires = ["meson-python>=0.13.1", "pybind11>=2.11.0"]
+build-backend = "mesonpy"
+
+[project]
+name = "gaara"
+version = "0.1.0"
+description = "Skeleton generation via 3D voxel thinning."
+requires-python = ">=3.10"
+dependencies = ["numpy"]
