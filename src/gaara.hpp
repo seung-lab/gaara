@@ -465,22 +465,22 @@ void thin_palagyi(
 
 	BorderCheckFn direction_map[6] = {
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.x > 0) && labels[loc-1] == PointStatus::FOREGROUND;
+			return (pt.x > 0) && labels[loc-1] == PointStatus::BACKGROUND;
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.y > 0) && labels[loc-sx] == PointStatus::FOREGROUND;
+			return (pt.y > 0) && labels[loc-sx] == PointStatus::BACKGROUND;
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.z > 0) && labels[loc-sxy] == PointStatus::FOREGROUND;
+			return (pt.z > 0) && labels[loc-sxy] == PointStatus::BACKGROUND;
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.x < sx - 1) && labels[loc+1] == PointStatus::FOREGROUND;
+			return (pt.x < sx - 1) && labels[loc+1] == PointStatus::BACKGROUND;
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.y < sy - 1) && labels[loc+sx] == PointStatus::FOREGROUND;
+			return (pt.y < sy - 1) && labels[loc+sx] == PointStatus::BACKGROUND;
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.z < sz - 1) && labels[loc+sxy] == PointStatus::FOREGROUND;
+			return (pt.z < sz - 1) && labels[loc+sxy] == PointStatus::BACKGROUND;
 		}
 	};
 
