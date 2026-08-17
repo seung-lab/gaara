@@ -403,6 +403,8 @@ enum ThinningDirection {
 struct DeletableEntry {
 	std::list<Voxel>::iterator it;
 	uint32_t config;
+
+	DeletableEntry(std::list<Voxel>::iterator& _it, uint32_t _config) : it(_it), config(_config) {}
 };
 
 void thin_palagyi(
