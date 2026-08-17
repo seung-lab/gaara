@@ -436,9 +436,7 @@ enum ThinningDirection {
 
 struct DeletableEntry {
 	std::list<Voxel>::iterator it;
-	uint32_t config;
-
-	DeletableEntry(std::list<Voxel>::iterator& _it, uint32_t _config) : it(_it), config(_config) {}
+	DeletableEntry(std::list<Voxel>::iterator& _it) : it(_it) {}
 };
 
 void thin_palagyi(
@@ -523,7 +521,7 @@ void thin_palagyi(
 				continue;
 			}
 			else if (is_directionally_border && simple_lut[config]) {
-				potentially_deletable.emplace_back(it, config);
+				potentially_deletable.emplace_back(it);
 			}
 
 			it++;
@@ -531,13 +529,22 @@ void thin_palagyi(
 
 		// Phase 2
 		for (DeletableEntry& entry : potentially_deletable) {
-			const uint32_t config = entry.config;
+			const Voxel pt = *entry.it;
+			
+			const bool interior = (
+				pt.x > 0 && pt.x < sx - 1 
+			 && pt.y > 0 && pt.y < sy - 1
+			 && pt.z > 0 && pt.z < sz - 1
+			);
+
+			const uint32_t config = interior
+				? foreground_configuration<true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
+				: foreground_configuration<false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
 
 			if (!simple_lut[config]) {
 				continue;
 			}
 
-			const Voxel pt = *entry.it;
 			const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
 			labels[loc] = PointStatus::BACKGROUND;
 			border_points.erase(entry.it);
@@ -582,7 +589,6 @@ void thin_palagyi(
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z);
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z);
 	} while (number_of_deleted_points > 0);
-
 
 	for (uint64_t i = 0; i < voxels; i++) {
 		labels[i] = labels[i] > 0;
