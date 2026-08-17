@@ -58,7 +58,7 @@ public:
 
     bool operator[](const uint64_t index) const {
     	if (index >= m_num_entries) { 
-    		return false; 
+    		throw std::runtime_error("index greater than table size.");
     	}
     	const uint64_t offset = index >> 3;
     	const uint64_t remainder = index & 0b111;

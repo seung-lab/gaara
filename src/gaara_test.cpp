@@ -46,3 +46,16 @@ TEST(Gaara, TestFindBorderPoints) {
 
 	EXPECT_EQ(border_points.size(), 0);
 }
+
+TEST(Gaara, TestSimplePointLUT) {
+
+	EXPECT_EQ(gaara::simple_lut[0] , false);
+	EXPECT_THROW(gaara::simple_lut[0xfffffffff] , std::runtime_error); // > num entries
+	EXPECT_EQ(gaara::simple_lut[0b11111111111111111111111111], false); // 2^26 - 1
+	EXPECT_EQ(gaara::simple_lut[0b11111111111111101111101111], true); // 4 & 10
+	EXPECT_EQ(gaara::simple_lut[0b11111111111110101111101111], true); // 4 & 10 & 12
+	EXPECT_EQ(gaara::simple_lut[0b11111111111111111111101010], true); // 0 & 2 & 4
+}
+
+
+
