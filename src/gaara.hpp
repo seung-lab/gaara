@@ -474,13 +474,18 @@ void thin_palagyi(
 
 			const bool is_directionally_border = border_check_fn(pt, loc);
 
-			if (is_directionally_border && simple_lut[config]) {
-				potentially_deletable.emplace_back(it, config);
-			}
+			// Palagyi's algorithm puts isthmus after simple, but they are 
+			// disjoint sets, so only one or zero should ever fire. I put
+			// isthmus first since it has a simpler condition and we can then
+			// put the simple decision behind an if else statement to avoid
+			// some calculation.
 			if (isthmus_lut[config]) {
 				labels[loc] = PointStatus::ISTHMUS;
 				it = border_points.erase(it);
 				continue;
+			}
+			else if (is_directionally_border && simple_lut[config]) {
+				potentially_deletable.emplace_back(it, config);
 			}
 
 			it++;
