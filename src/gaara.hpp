@@ -500,7 +500,11 @@ void thin_palagyi(
 				continue;
 			}
 
-			const bool interior = (pt.x > 0 && pt.x < sx - 1 && pt.y > 0 && pt.y < sy - 1 && pt.z > 0 && pt.z < sz - 1);
+			const bool interior = (
+				pt.x > 0 && pt.x < sx - 1 
+			 && pt.y > 0 && pt.y < sy - 1
+			 && pt.z > 0 && pt.z < sz - 1
+			);
 
 			const uint32_t config = interior
 				? foreground_configuration<true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
