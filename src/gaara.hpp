@@ -259,6 +259,36 @@ auto find_border_points(
 
 		int stale_stencil = 3;
 
+#define NOT_PURE_RIGHT() \
+	labels[loc] = PointStatus::BORDER;\
+	border_points.emplace_back(x,y,z);\
+	\
+	if (x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {\
+		labels[loc+1] = PointStatus::BORDER;\
+		border_points.emplace_back(x+1,y,z);\
+	}\
+	if (x < sx - 2 && labels[loc+2] == PointStatus::FOREGROUND) {\
+		labels[loc+2] = PointStatus::BORDER;\
+		border_points.emplace_back(x+2,y,z);\
+	}\
+	\
+	x += 2;\
+	stale_stencil = 3;\
+	continue;
+
+#define NOT_PURE_MIDDLE()\
+	labels[loc] = PointStatus::BORDER;\
+	border_points.emplace_back(x,y,z);\
+	\
+	if (x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {\
+		labels[loc+1] = PointStatus::BORDER;\
+		border_points.emplace_back(x+1,y,z);\
+	}\
+	\
+	x++;\
+	stale_stencil = 2;\
+	continue;
+
 #define FILL_STENCIL(is_pure_fn) \
 	if (stale_stencil == 1) {\
 		pure_left = pure_middle;\
@@ -278,15 +308,11 @@ auto find_border_points(
 			pure_right = pure_middle;\
 		}\
 		if (!pure_right) {\
-			x += 2;\
-			stale_stencil = 3;\
-			continue;\
+			NOT_PURE_RIGHT()\
 		}\
 		pure_middle = is_pure_fn(x,y,z);\
 		if (!pure_middle) {\
-			x++;\
-			stale_stencil = 2;\
-			continue;\
+			NOT_PURE_MIDDLE()\
 		}\
 		if (x > 0) {\
 			pure_left = is_pure(x-1,y,z);\
@@ -300,9 +326,7 @@ auto find_border_points(
 		if (x < sx - 1) {\
 			pure_right = is_pure(x+1,y,z);\
 			if (!pure_right) {\
-				x += 2;\
-				stale_stencil = 3;\
-				continue;\
+				NOT_PURE_RIGHT()\
 			}\
 			pure_middle = is_pure(x,y,z);\
 		}\
@@ -310,9 +334,7 @@ auto find_border_points(
 			pure_middle = is_pure(x,y,z);\
 			pure_right = pure_middle;\
 			if (!pure_right) {\
-				x += 2;\
-				stale_stencil = 3;\
-				continue;\
+				NOT_PURE_RIGHT()\
 			}\
 		}\
 	}
@@ -343,35 +365,10 @@ auto find_border_points(
 					stale_stencil = 0;
 
 					if (!pure_right) {
-						labels[loc] = PointStatus::BORDER;
-						border_points.emplace_back(x,y,z);
-						
-						if (x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
-							labels[loc+1] = PointStatus::BORDER;
-							border_points.emplace_back(x+1,y,z);
-						}
-						if (x < sx - 2 && labels[loc+2] == PointStatus::FOREGROUND) {
-							labels[loc+2] = PointStatus::BORDER;
-							border_points.emplace_back(x+2,y,z);
-						}
-
-						x += 2;
-						stale_stencil = 3;
-
-						continue;
+						NOT_PURE_RIGHT()
 					}
 					else if (!pure_middle) {
-						labels[loc] = PointStatus::BORDER;
-						border_points.emplace_back(x,y,z);
-
-						if (x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
-							labels[loc+1] = PointStatus::BORDER;
-							border_points.emplace_back(x+1,y,z);
-						}
-
-						x++;
-						stale_stencil = 2;
-						continue;
+						NOT_PURE_MIDDLE()
 					}
 					else if (!pure_left) {
 						labels[loc] = PointStatus::BORDER;
@@ -386,6 +383,8 @@ auto find_border_points(
 		return border_points;
 	};
 
+#undef NOT_PURE_RIGHT
+#undef NOT_PURE_MIDDLE
 #undef FILL_STENCIL
 
 	return process_block(0, sx, 0, sy, 0, sz);
