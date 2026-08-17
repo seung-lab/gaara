@@ -22,7 +22,7 @@ py::array thin_palagyi(const py::array& labels) {
 		? labels.shape()[2] 
 		: 1;
 
-	uint8_t* labels_ptr = const_cast<uint8_t*>(labels.data());
+	uint8_t* labels_ptr = static_cast<uint8_t*>(const_cast<void*>(labels.data()));
 
 	gaara::thin_palagyi(labels_ptr, sx, sy, sz);
 
