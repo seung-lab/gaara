@@ -578,6 +578,11 @@ void thin_palagyi(
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z);
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z);
 	} while (number_of_deleted_points > 0);
+
+
+	for (uint64_t i = 0; i < voxels; i++) {
+		labels[i] = labels[i] > 0;
+	}
 }
 
 
