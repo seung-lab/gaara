@@ -52,6 +52,8 @@ TEST(Gaara, TestSimplePointLUT) {
 	EXPECT_EQ(gaara::simple_lut[0] , false);
 	EXPECT_THROW(gaara::simple_lut[0xfffffffff] , std::runtime_error); // > num entries
 	EXPECT_EQ(gaara::simple_lut[0b11111111111111111111111111], false); // 2^26 - 1
+	EXPECT_EQ(gaara::simple_lut[0b00000000000000000000010000], false); // 4 (endpoint)
+	EXPECT_EQ(gaara::simple_lut[0b00000000000000010000000000], false); // 10 (endpoint)
 	EXPECT_EQ(gaara::simple_lut[0b11111111111111101111101111], true); // 4 & 10
 	EXPECT_EQ(gaara::simple_lut[0b11111111111110101111101111], true); // 4 & 10 & 12
 	EXPECT_EQ(gaara::simple_lut[0b11111111111111111111101010], true); // 0 & 2 & 4
