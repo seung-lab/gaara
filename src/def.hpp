@@ -112,7 +112,7 @@ struct TwoBitArray {
 		const uint64_t remainder = (index & 0b11) << 1;
 		uint8_t existing = m_data[offset];
 		existing &= ~(0b11 << remainder);
-		existing |= val << remainder;
+		existing |= (val & 0b11) << remainder;
 		m_data[offset] = existing;
 	}
 
