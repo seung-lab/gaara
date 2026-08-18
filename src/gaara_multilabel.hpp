@@ -371,10 +371,10 @@ void skeletonize(
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
 	if (labels == nullptr) {
-		throw std::runtime_error("Null pointer provided for data.");
+		throw std::invalid_argument("Null pointer provided for data.");
 	}
 	else if (sx >= gaara::def::MAX_DIM || sy >= gaara::def::MAX_DIM || sz >= gaara::def::MAX_DIM) {
-		throw std::runtime_error("Image is larger than maximum supported dimensions.");
+		throw std::invalid_argument("Image is larger than maximum supported dimensions.");
 	}
 
 	// enforce binary image starting point
