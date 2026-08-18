@@ -34,9 +34,9 @@ namespace gaara::binary {
 // y
 // axis
 
-template <bool Interior>
+template <typename LABEL, bool Interior>
 uint32_t foreground_configuration(
-	uint8_t* labels, 
+	LABEL* labels, 
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const uint64_t x, const uint64_t y, const uint64_t z  
 ) {
@@ -130,8 +130,9 @@ uint32_t foreground_configuration(
 	return index;
 }
 
+template <typename LABEL>
 auto find_border_points(
-	uint8_t* labels,
+	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool erode_border = true
 ) {
@@ -361,8 +362,9 @@ auto find_border_points(
 	return process_block(0, sx, 0, sy, 0, sz);
 }
 
+template <typename LABEL>
 void skeletonize(
-	uint8_t* labels,
+	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
 	if (labels == nullptr) {
@@ -435,8 +437,8 @@ void skeletonize(
 			);
 
 			const uint32_t config = interior
-				? foreground_configuration<true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-				: foreground_configuration<false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
+				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
 
 			const bool is_directionally_border = border_check_fn(pt, loc);
 
@@ -468,8 +470,8 @@ void skeletonize(
 			);
 
 			const uint32_t config = interior
-				? foreground_configuration<true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-				: foreground_configuration<false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
+				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
 
 			if (!simple_lut[config]) {
 				continue;
