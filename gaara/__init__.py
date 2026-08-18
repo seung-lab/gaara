@@ -3,9 +3,13 @@ import numpy.typing as npt
 
 from . import fastgaara
 
-__all__ = ["thin_palagyi"]
+__all__ = ["skeletonize"]
 
-def thin_palagyi(labels:npt.NDArray[np.uint8], in_place:bool = False) -> npt.NDArray[np.uint8]:
+def skeletonize(
+	labels:npt.NDArray[np.integer],
+	binary_image:bool = False,
+	in_place:bool = False
+) -> npt.NDArray[np.integer]:
 	"""
 	Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image.
 
@@ -30,13 +34,16 @@ def thin_palagyi(labels:npt.NDArray[np.uint8], in_place:bool = False) -> npt.NDA
 	elif not in_place:
 		labels = np.copy(labels, order="F")
 
-	fastgaara.thin_palagyi(labels)
-	return labels
+	orig_dtype = labels.dtype
+	if labels.dtype == bool:
+		binary_image = True
+		labels = labels.view(np.uint8)
 
+	if binary_image:
+		fastgaara.thin_palagyi_binary(labels)
+	else:
+		fastgaara.thin_palagyi_multilabel(labels)
 
-
-
-
-
+	return labels.view(orig_dtype)
 
 

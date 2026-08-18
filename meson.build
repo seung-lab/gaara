@@ -1,4 +1,9 @@
-project('fastgaara', 'cpp', version: '0.1.0')
+project(
+  'fastgaara',
+  'cpp', 
+  version: '0.1.0',
+  default_options: ['cpp_std=c++20'],
+)
 
 py = import('python').find_installation(pure: false)
 py_dep = py.dependency()

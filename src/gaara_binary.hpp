@@ -1,5 +1,5 @@
-#ifndef __GAARA_THIN_HPP__
-#define __GAARA_THIN_HPP__
+#ifndef __GAARA_BINARY_HPP__
+#define __GAARA_BINARY_HPP__
 
 #include <cstdio>
 #include <cstdint>
@@ -9,74 +9,11 @@
 #include <fstream>
 #include <stdexcept>
 
-namespace gaara {
+#include "def.hpp"
 
-enum PointStatus {
-	BACKGROUND = 0,
-	FOREGROUND = 1,
-	BORDER = 2,
-	ISTHMUS = 3
-};
+using namespace gaara::def;
 
-struct PackedLookupTable {
-public:
-    uint8_t* m_lut_data;
-    uint64_t m_size;
-    uint64_t m_num_entries;
-    const uint64_t k_max_size = (1 << 26) >> 3;
-
-public:
-    PackedLookupTable(const char* filename) {
-        std::ifstream file(filename, std::ios::binary | std::ios::ate);
-        if (!file) {
-            throw std::runtime_error("Failed to open file");
-        }
-
-        m_size = file.tellg();
-
-        if (m_size < 0 || m_size != k_max_size) {
-            throw std::runtime_error("Incorrect file size for lookup table.");
-        }
-
-        m_num_entries = m_size << 3;
-
-        file.seekg(0, std::ios::beg);
-
-        m_lut_data = new uint8_t[m_size];
-        if (!file.read(reinterpret_cast<char*>(m_lut_data), m_size)) {
-            throw std::runtime_error("Failed to read file data");
-        }
-    }
-
-    ~PackedLookupTable() {
-        delete[] m_lut_data;
-    }
-
-    uint64_t size() const {
-    	return m_size << 3;
-    }
-
-    bool operator[](const uint64_t index) const {
-    	if (index >= m_num_entries) { 
-    		throw std::runtime_error("index greater than table size.");
-    	}
-    	const uint64_t offset = index >> 3;
-    	const uint64_t remainder = index & 0b111;
-    	return (m_lut_data[offset] >> remainder) & 1;
-    }
-};
-
-// Not thread safe.
-static PackedLookupTable simple_lut("lookup_tables/tables/simple.bin");
-static PackedLookupTable isthmus_lut("lookup_tables/tables/isthmus.bin");
-
-struct Voxel {
-	uint16_t x;
-	uint16_t y;
-	uint16_t z;
-
-	Voxel(uint16_t _x, uint16_t _y, uint16_t _z) : x(_x), y(_y), z(_z) {}
-};
+namespace gaara::binary {
 
 // map for i variable (skip center to save space)
 
@@ -425,21 +362,7 @@ auto find_border_points(
 	return process_block(0, sx, 0, sy, 0, sz);
 }
 
-enum ThinningDirection {
-	PLUS_X = 0,
-	PLUS_Y = 1,
-	PLUS_Z = 2,
-	MINUS_X = 3,
-	MINUS_Y = 4,
-	MINUS_Z = 5
-};
-
-struct DeletableEntry {
-	std::list<Voxel>::iterator it;
-	DeletableEntry(std::list<Voxel>::iterator& _it) : it(_it) {}
-};
-
-void thin_palagyi(
+void skeletonize(
 	uint8_t* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
@@ -451,6 +374,8 @@ void thin_palagyi(
 	for (uint64_t i = 0; i < voxels; i++) {
 		labels[i] = labels[i] > 0; // PointStatus::BACKGROUND or FOREGROUND
 	}
+
+	using DeletableEntry = std::list<Voxel>::iterator;
 
 	std::list<Voxel> border_points = find_border_points(labels, sx, sy, sz);
 	std::deque<DeletableEntry> potentially_deletable;
@@ -528,8 +453,8 @@ void thin_palagyi(
 		}
 
 		// Phase 2
-		for (DeletableEntry& entry : potentially_deletable) {
-			const Voxel pt = *entry.it;
+		for (DeletableEntry& it : potentially_deletable) {
+			const Voxel pt = *it;
 			
 			const bool interior = (
 				pt.x > 0 && pt.x < sx - 1 
@@ -547,7 +472,7 @@ void thin_palagyi(
 
 			const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
 			labels[loc] = PointStatus::BACKGROUND;
-			border_points.erase(entry.it);
+			border_points.erase(it);
 			number_of_deleted_points++;
 
 			if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {

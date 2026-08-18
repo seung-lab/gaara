@@ -8,9 +8,10 @@
 
 #include <cstdio>
 
-#include "gaara.hpp"
+#include "gaara_binary.hpp"
+#include "gaara_multilabel.hpp"
 
-TEST(Gaara, TestFindBorderPoints) {
+TEST(Gaara, TestFindBorderPointsBinary) {
 
 	int sz = 99;
 	int sy = 101;
@@ -27,7 +28,7 @@ TEST(Gaara, TestFindBorderPoints) {
 		}
 	}
 
-	auto border_points = gaara::find_border_points(image.data(), sx, sy, sz);
+	auto border_points = gaara::binary::find_border_points(image.data(), sx, sy, sz);
 
 	// For debugging:
 
@@ -38,30 +39,88 @@ TEST(Gaara, TestFindBorderPoints) {
 	EXPECT_EQ(border_points.size(), (sx-2) * (sy-2) * (sz-2) - (sx-4) * (sy-4) * (sz-4));
 	
 	std::fill(image.begin(), image.end(), 1);
-	border_points = gaara::find_border_points(image.data(), sx, sy, sz);
+	border_points = gaara::binary::find_border_points(image.data(), sx, sy, sz);
 
 	EXPECT_EQ(border_points.size(), sx * sy * sz - (sx-2) * (sy-2) * (sz-2));
 
-	border_points = gaara::find_border_points(image.data(), sx, sy, sz, false);
+	border_points = gaara::binary::find_border_points(image.data(), sx, sy, sz, false);
+
+	EXPECT_EQ(border_points.size(), 0);
+}
+
+TEST(Gaara, TestFindBorderPointsMultilabel) {
+
+	int sz = 100;
+	int sy = 100;
+	int sx = 100;
+	int voxels = sx * sy * sz;
+
+	std::vector<uint8_t> image(voxels);
+	gaara::def::TwoBitArray label_status(voxels);
+
+	for (uint64_t z = 1; z < sz-1; z++) {
+		for (uint64_t y = 1; y < sy-1; y++) {
+			for (uint64_t x = 1; x < sx-1; x++) {
+				uint64_t loc = x + sx * (y + sy * z);
+				image[loc] = 1;
+				label_status.set(loc, 1);
+			}
+		}
+	}
+
+	int delta = 10;
+
+	for (uint64_t z = delta; z < sz-delta; z++) {
+		for (uint64_t y = delta; y < sy-delta; y++) {
+			for (uint64_t x = delta; x < sx-delta; x++) {
+				uint64_t loc = x + sx * (y + sy * z);
+				image[loc] = 2;
+			}
+		}
+	}
+
+	auto border_points = gaara::multilabel::find_border_points(image.data(), label_status, sx, sy, sz);
+
+	// For debugging:
+
+	// for (auto vx : border_points) {
+	// 	printf("%d %d %d\n", vx.x, vx.y, vx.z);
+	// }
+
+	auto cube_border_size = [sx,sy,sz](int delta) {
+		return (sx-2*delta) * (sy-2*delta) * (sz - 2*delta)
+		- (sx-2*(delta+1)) * (sy-2*(delta+1)) * (sz - 2*(delta+1));
+	};
+
+	EXPECT_EQ(border_points.size(), cube_border_size(1) + cube_border_size(delta) + cube_border_size(delta+1));
+	
+	std::fill(image.begin(), image.end(), 1);
+	label_status.fill(PointStatus::FOREGROUND);
+
+	border_points = gaara::multilabel::find_border_points(image.data(), label_status, sx, sy, sz);
+
+	EXPECT_EQ(border_points.size(), cube_border_size(0));
+
+	border_points = gaara::multilabel::find_border_points(image.data(), label_status, sx, sy, sz, false);
 
 	EXPECT_EQ(border_points.size(), 0);
 }
 
 TEST(Gaara, TestSimplePointLUT) {
 
-	EXPECT_EQ(gaara::simple_lut[0] , false);
-	EXPECT_THROW(gaara::simple_lut[0xfffffffff] , std::runtime_error); // > num entries
-	EXPECT_EQ(gaara::simple_lut[0b11111111111111111111111111], false); // 2^26 - 1
+	EXPECT_EQ(gaara::def::simple_lut[0] , false);
+	EXPECT_THROW(gaara::def::simple_lut[0xfffffffff] , std::runtime_error); // > num entries
+	EXPECT_EQ(gaara::def::simple_lut[0b11111111111111111111111111], false); // 2^26 - 1
 
 	for (int i = 0; i < 26; i++) {
-		EXPECT_EQ(gaara::simple_lut[1 << i], false); // endpoint tests
+		EXPECT_EQ(gaara::def::simple_lut[1 << i], false); // endpoint tests
 	}
 
-	EXPECT_EQ(gaara::simple_lut[0b11111111111111101111101111], true); // 4 & 10 off
-	EXPECT_EQ(gaara::simple_lut[0b11111111111110101111101111], true); // 4 & 10 & 12 off
-	EXPECT_EQ(gaara::simple_lut[0b11111111111111111111101010], true); // 0 & 2 & 4 off
+	EXPECT_EQ(gaara::def::simple_lut[0b11111111111111101111101111], true); // 4 & 10 off
+	EXPECT_EQ(gaara::def::simple_lut[0b11111111111110101111101111], true); // 4 & 10 & 12 off
+	EXPECT_EQ(gaara::def::simple_lut[0b11111111111111111111101010], true); // 0 & 2 & 4 off
 
-	EXPECT_EQ(gaara::simple_lut[0b00000000000000010000010000], true); // 4 & 10 (endpoint)
+	EXPECT_EQ(gaara::def::simple_lut[0b00000000000000010000010000], true); // 4 & 10 (endpoint)
 
 }
 
@@ -92,7 +151,7 @@ TEST(Gaara, TestTorusSmall) {
 		0, 0, 0, 0, 0
 	};
 
-	gaara::thin_palagyi(torus.data(), sx, sy, sz);
+	gaara::binary::skeletonize(torus.data(), sx, sy, sz);
 
 	int num_foreground = 0;
 	for (int i = 0; i < voxels; i++) {
@@ -101,7 +160,7 @@ TEST(Gaara, TestTorusSmall) {
 
 	EXPECT_EQ(num_foreground, 4);
 
-	gaara::thin_palagyi(torus.data(), sx, sy, sz);
+	gaara::binary::skeletonize(torus.data(), sx, sy, sz);
 
 	num_foreground = 0;
 	for (int i = 0; i < voxels; i++) {
@@ -143,7 +202,7 @@ TEST(Gaara, TestTorusSmallDoubleThick) {
 		0, 0, 0, 0, 0, 0, 0
 	};
 
-	gaara::thin_palagyi(torus.data(), sx, sy, sz);
+	gaara::binary::skeletonize(torus.data(), sx, sy, sz);
 
 	// for (uint64_t y = 0; y < sy; y++) {
 	// 	for (uint64_t x = 0; x < sx; x++) {
@@ -160,7 +219,7 @@ TEST(Gaara, TestTorusSmallDoubleThick) {
 
 	EXPECT_EQ(num_foreground, 7);
 
-	gaara::thin_palagyi(torus.data(), sx, sy, sz);
+	gaara::binary::skeletonize(torus.data(), sx, sy, sz);
 
 	num_foreground = 0;
 	for (int i = 0; i < voxels; i++) {
