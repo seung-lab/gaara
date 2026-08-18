@@ -103,7 +103,7 @@ struct TwoBitArray {
 
 	uint8_t get(const uint64_t index) const {
 		const uint64_t offset = index >> 2;
-		const uint64_t remainder = index & 0b11;
+		const uint64_t remainder = (index & 0b11) << 1;
 		return (m_data[offset] >> remainder) & 0b11;
 	}
 
@@ -111,7 +111,7 @@ struct TwoBitArray {
 		const uint64_t offset = index >> 2;
 		const uint64_t remainder = (index & 0b11) << 1;
 		uint8_t existing = m_data[offset];
-		existing = ~(~existing | (0b11 << remainder));
+		existing &= ~(0b11 << remainder);
 		existing |= val << remainder;
 		m_data[offset] = existing;
 	}
@@ -121,14 +121,16 @@ struct TwoBitArray {
 	}
 
 	void fill(const uint8_t val) {
+		const uint8_t masked_val = val & 0b11;
+
 		uint8_t packed_val = (
-			(val & 0b11)
-			| ((val & 0b11) << 2)
-			| ((val & 0b11) << 4)
-			| ((val & 0b11) << 6)
+			masked_val
+			| (masked_val << 2)
+			| (masked_val << 4)
+			| (masked_val << 6)
 		);
 
-		for (uint64_t i = 0; i < m_num_entries; i++) {
+		for (uint64_t i = 0; i < m_size_bytes; i++) {
 			m_data[i] = packed_val;
 		}
 	}
