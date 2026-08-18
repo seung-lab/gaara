@@ -6,7 +6,6 @@
 #include <deque>
 #include <list>
 #include <functional>
-#include <fstream>
 #include <stdexcept>
 
 #include "def.hpp"
@@ -371,6 +370,12 @@ void skeletonize(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
+	if (labels == nullptr) {
+		throw std::runtime_error("Null pointer provided for data.");
+	}
+	else if (sx >= gaara::def::MAX_DIM || sy >= gaara::def::MAX_DIM || sz >= gaara::def::MAX_DIM) {
+		throw std::runtime_error("Image is larger than maximum supported dimensions.");
+	}
 
 	// enforce binary image starting point
 	const uint64_t voxels = sx * sy * sz;

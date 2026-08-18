@@ -4,9 +4,12 @@
 #include <cstdio>
 #include <cstdint>
 #include <fstream>
+#include <limits>
 #include <stdexcept>
 
 namespace gaara::def {
+
+constexpr uint64_t MAX_DIM{ std::numeric_limits<uint16_t>::max() };
 
 enum PointStatus {
 	BACKGROUND = 0,
