@@ -18,13 +18,13 @@ enum PointStatus {
 	ISTHMUS = 3
 };
 
-struct PackedLookupTable {
+struct OneBitArray {
 	uint8_t* m_lut_data;
 	uint64_t m_size;
 	uint64_t m_num_entries;
 	const uint64_t k_max_size = (1 << 26) >> 3;
 
-	PackedLookupTable(const char* filename) {
+	OneBitArray(const char* filename) {
 		std::ifstream file(filename, std::ios::binary | std::ios::ate);
 		if (!file) {
 			throw std::runtime_error("Failed to open file");
@@ -46,12 +46,12 @@ struct PackedLookupTable {
 		}
 	}
 
-	~PackedLookupTable() {
+	~OneBitArray() {
 		delete[] m_lut_data;
 	}
 
 	uint64_t size() const {
-		return m_size << 3;
+		return m_num_entries;
 	}
 
 	bool operator[](const uint64_t index) const {
@@ -65,8 +65,8 @@ struct PackedLookupTable {
 };
 
 // Not thread safe.
-static PackedLookupTable simple_lut("lookup_tables/tables/simple.bin");
-static PackedLookupTable isthmus_lut("lookup_tables/tables/isthmus.bin");
+static OneBitArray simple_lut("lookup_tables/tables/simple.bin");
+static OneBitArray isthmus_lut("lookup_tables/tables/isthmus.bin");
 
 struct Voxel {
 	uint16_t x;
