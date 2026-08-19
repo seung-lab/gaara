@@ -64,7 +64,6 @@ struct OneBitArray {
 	}
 };
 
-// Not thread safe.
 static OneBitArray simple_lut("lookup_tables/tables/simple.bin");
 static OneBitArray isthmus_lut("lookup_tables/tables/isthmus.bin");
 
