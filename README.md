@@ -1,6 +1,19 @@
 # gaara
 Skeleton thinning algorithm for large images.
 
+```python
+import gaara
+import numpy as np
+
+arr = np.load(...) # some 3d array in fortran order
+
+# binary images are slightly more efficient to process
+# 80% of the memory and slightly faster.
+
+arr = gaara.skeletonize(arr, binary_image=True, in_place=False)
+arr = gaara.skeletonize(arr, binary_image=False, in_place=False)
+```
+
 Gaara is a skeletion generation via voxel thinning algorithm based on Pal&aacute;gyi's 2014 paper [1] and inspired by Matejek et al.'s work on [synapseaware](https://github.com/Rhoana/synapseaware/). [2]
 
 While efficient and fine for tracing neurites that have a natural tree structure, a shortcoming of [Kimimaro](https://github.com/seung-lab/kimimaro) is its inability to generate topologically correct skeletons [3] which have applications to e.g. glia and blood vessels.
