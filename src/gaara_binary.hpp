@@ -382,10 +382,10 @@ auto skeletonize(
 		labels[i] = labels[i] > 0; // PointStatus::BACKGROUND or FOREGROUND
 	}
 
-	using DeletableEntry = std::list<Voxel>::iterator;
+	using Iterator = std::list<Voxel>::iterator;
 
 	std::list<Voxel> border_points = find_border_points(labels, sx, sy, sz);
-	std::deque<DeletableEntry> potentially_deletable;
+	std::deque<Iterator> potentially_deletable;
 
 	if (border_points.size() == 0) {
 		return border_points;
@@ -460,7 +460,7 @@ auto skeletonize(
 		}
 
 		// Phase 2
-		for (DeletableEntry& it : potentially_deletable) {
+		for (Iterator& it : potentially_deletable) {
 			const Voxel pt = *it;
 			
 			const bool interior = (
