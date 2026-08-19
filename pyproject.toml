@@ -10,6 +10,7 @@ dependencies = ["numpy"]
 author = "William Silversmith"
 author_email = "ws9@princeton.edu"
 description = "Skeleton generation via 3D voxel thinning."
+readme = "README.md"
 url = "https://github.com/seung-lab/gaara/"
 license = "BSD-3-Clause"
 classifiers = [
