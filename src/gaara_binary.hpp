@@ -363,7 +363,7 @@ auto find_border_points(
 }
 
 template <typename LABEL>
-void skeletonize(
+auto skeletonize(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
@@ -525,6 +525,8 @@ void skeletonize(
 	for (uint64_t i = 0; i < voxels; i++) {
 		labels[i] = labels[i] > 0;
 	}
+
+	return border_points;
 }
 
 
