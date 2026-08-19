@@ -5,6 +5,27 @@ build-backend = "mesonpy"
 [project]
 name = "gaara"
 version = "0.1.0"
-description = "Skeleton generation via 3D voxel thinning."
 requires-python = ">=3.10"
 dependencies = ["numpy"]
+author = "William Silversmith"
+author_email = "ws9@princeton.edu"
+description = "Skeleton generation via 3D voxel thinning."
+url = "https://github.com/seung-lab/gaara/"
+license = "BSD-3-Clause"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Topic :: Utilities",
+]
