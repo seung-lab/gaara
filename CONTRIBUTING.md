@@ -84,3 +84,6 @@ This time profiling profile command (targeting `test.cpp`) will only work on Mac
 make profile
 ```
 
+## Code Format
+
+Try to match the format of the existing codebase, but if any issues arise, we'll just use clang-format (for C++) or black (for Python).
