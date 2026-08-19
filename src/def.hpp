@@ -74,9 +74,7 @@ struct OneBitArray {
 			? 0xff
 			: 0x00;
 
-		for (uint64_t i = 0; i < m_size; i++) {
-			m_data[i] = packed_val;
-		}
+		std::fill(m_data, m_data + m_size, packed_val);
 	}
 };
 
@@ -148,9 +146,7 @@ struct TwoBitArray {
 			| (masked_val << 6)
 		);
 
-		for (uint64_t i = 0; i < m_size_bytes; i++) {
-			m_data[i] = packed_val;
-		}
+		std::fill(m_data, m_data + m_size_bytes, packed_val);
 	}
 };
 
