@@ -20,6 +20,17 @@ While efficient and fine for tracing neurites that have a natural tree structure
 
 Gaara attempts to be an efficient voxel thinning algorithm implementation that can handle very large images on a single machine by making use of crackle compression dynamically.
 
+## Installation
+
+The PyPI page is located [here](https://pypi.org/project/gaara/).
+
+```bash
+pip install gaara
+```
+
+If you are installing from source, ensure the lookup tables have been generated (they should be stored in version control). You can regenerate them using `make` in the lookup_tables directory. It takes about a minute to compute them.
+
+
 ## References
 
 1. K. Palágyi et al., “A Sequential 3D Thinning Algorithm and Its Medical Applications,” in Information Processing in Medical Imaging, M. F. Insana and R. M. Leahy, Eds., Berlin, Heidelberg: Springer, 2001, pp. 409–415. doi: 10.1007/3-540-45729-1_42.  
