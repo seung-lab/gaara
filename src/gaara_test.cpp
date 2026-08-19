@@ -151,7 +151,7 @@ TEST(Gaara, TestTorusSmall) {
 		0, 0, 0, 0, 0
 	};
 
-	gaara::binary::skeletonize(torus.data(), sx, sy, sz);
+	gaara::binary::skeletonize<uint8_t>(torus.data(), sx, sy, sz);
 
 	int num_foreground = 0;
 	for (int i = 0; i < voxels; i++) {
@@ -160,7 +160,7 @@ TEST(Gaara, TestTorusSmall) {
 
 	EXPECT_EQ(num_foreground, 4);
 
-	gaara::binary::skeletonize(torus.data(), sx, sy, sz);
+	gaara::binary::skeletonize<uint8_t>(torus.data(), sx, sy, sz);
 
 	num_foreground = 0;
 	for (int i = 0; i < voxels; i++) {
@@ -202,7 +202,7 @@ TEST(Gaara, TestTorusSmallDoubleThick) {
 		0, 0, 0, 0, 0, 0, 0
 	};
 
-	gaara::binary::skeletonize(torus.data(), sx, sy, sz);
+	gaara::binary::skeletonize<uint8_t>(torus.data(), sx, sy, sz);
 
 	// for (uint64_t y = 0; y < sy; y++) {
 	// 	for (uint64_t x = 0; x < sx; x++) {
@@ -219,7 +219,7 @@ TEST(Gaara, TestTorusSmallDoubleThick) {
 
 	EXPECT_EQ(num_foreground, 7);
 
-	gaara::binary::skeletonize(torus.data(), sx, sy, sz);
+	gaara::binary::skeletonize<uint8_t>(torus.data(), sx, sy, sz);
 
 	num_foreground = 0;
 	for (int i = 0; i < voxels; i++) {

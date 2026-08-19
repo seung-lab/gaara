@@ -388,7 +388,7 @@ auto skeletonize(
 	std::deque<DeletableEntry> potentially_deletable;
 
 	if (border_points.size() == 0) {
-		return;
+		return border_points;
 	}
 
 	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
