@@ -19,10 +19,16 @@ enum PointStatus {
 };
 
 struct OneBitArray {
-	uint8_t* m_lut_data;
+	uint8_t* m_data;
 	uint64_t m_size;
 	uint64_t m_num_entries;
 	const uint64_t k_max_size = (1 << 26) >> 3;
+
+	OneBitArray(const uint64_t size) {
+		m_num_entries = size;
+		m_size = (size + 7) >> 3;
+		m_data = new uint8_t[m_size]();
+	}
 
 	OneBitArray(const char* filename) {
 		std::ifstream file(filename, std::ios::binary | std::ios::ate);
@@ -40,14 +46,14 @@ struct OneBitArray {
 
 		file.seekg(0, std::ios::beg);
 
-		m_lut_data = new uint8_t[m_size];
-		if (!file.read(reinterpret_cast<char*>(m_lut_data), m_size)) {
+		m_data = new uint8_t[m_size];
+		if (!file.read(reinterpret_cast<char*>(m_data), m_size)) {
 			throw std::runtime_error("Failed to read file data");
 		}
 	}
 
 	~OneBitArray() {
-		delete[] m_lut_data;
+		delete[] m_data;
 	}
 
 	uint64_t size() const {
@@ -60,7 +66,17 @@ struct OneBitArray {
 		}
 		const uint64_t offset = index >> 3;
 		const uint64_t remainder = index & 0b111;
-		return (m_lut_data[offset] >> remainder) & 1;
+		return (m_data[offset] >> remainder) & 1;
+	}
+
+	void fill(const bool value) {
+		const uint8_t packed_value = value
+			? 0xff
+			: 0x00;
+
+		for (uint64_t i = 0; i < m_size; i++) {
+			m_data[i] = packed_val;
+		}
 	}
 };
 
