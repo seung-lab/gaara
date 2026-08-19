@@ -17,7 +17,7 @@ src_files = files('gaara/fastgaara.cpp')
 
 install_data(
   ['lookup_tables/tables/simple.bin', 'lookup_tables/tables/isthmus.bin'],
-  install_dir: py.get_install_dir() / 'gaara' / 'tables',
+  install_dir: py.get_install_dir() / 'lookup_tables' / 'tables',
 )
 
 py.install_sources(
