@@ -139,7 +139,7 @@ struct TwoBitArray {
 	void fill(const uint8_t val) {
 		const uint8_t masked_val = val & 0b11;
 
-		uint8_t packed_value = (
+		const uint8_t packed_value = (
 			masked_val
 			| (masked_val << 2)
 			| (masked_val << 4)
