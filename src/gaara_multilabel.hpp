@@ -416,7 +416,7 @@ void thin(
 }
 
 template <typename LABEL>
-void skeletonize(
+auto skeletonize(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
