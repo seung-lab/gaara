@@ -26,6 +26,7 @@
 
 #include <cstdio>
 #include <cstdint>
+#include <unordered_set>
 
 #include "cc3d.hpp"
 
@@ -141,36 +142,43 @@ uint8_t* compute_oracle() {
 		// N_6(p)\B has at least one bg point
 		const bool condition_2 = num_6_bg > 0;		
 
-		// N_6(p)\B has at least two points 18-connected
-		const bool condition_3 = (num_6_bg <= 1) || (
-			(
-				((stencil[4] == 0) || (stencil[22] == 0)) 
-				&& (
-					   (stencil[10] == 0)
-					|| (stencil[12] == 0)
-					|| (stencil[14] == 0)
-					|| (stencil[16] == 0)
-				)
-			)
-			|| (
-				((stencil[12] == 0) || (stencil[14] == 0))
-				&& (
-					   (stencil[4] == 0)
-					|| (stencil[10] == 0)
-					|| (stencil[16] == 0)
-					|| (stencil[22] == 0)
-				)
-			)
-			|| (
-				((stencil[10] == 0) || (stencil[16] == 0))
-				&& (
-					   (stencil[4] == 0)
-					|| (stencil[12] == 0)
-					|| (stencil[14] == 0)
-					|| (stencil[22] == 0)
-				)
-			)
+		// Any two points in N6(p) \ B are 6–connected in the set N18(p) \ B.
+		for (int i = 0; i < 27; i++) {
+			stencil[i] = stencil[i] == 0;
+		}
+		
+		// clear the 26-connected corners and center
+		stencil[13] = 0;
+
+		stencil[0] = 0;
+		stencil[2] = 0;
+		stencil[6] = 0;
+		stencil[8] = 0;
+
+		stencil[18] = 0;
+		stencil[20] = 0;
+		stencil[24] = 0;
+		stencil[26] = 0;
+
+		N = 0;
+		std::fill(out_labels, out_labels + 27, 0);
+		cc3d::connected_components3d_6<uint8_t, uint8_t>(
+			stencil,
+			/*sx=*/3, /*sy=*/3, /*sz=*/3, 
+			/*max_labels=*/27,
+			/*out_labels=*/out_labels,
+			/*N=*/N
 		);
+
+		int neighborhood_6[6] = {4, 10, 12, 14, 16, 22};
+		std::unordered_set<uint32_t> uniq;
+
+		for (int i = 0; i < 6; i++) {
+			uniq.emplace(out_labels[neighborhood_6[i]]);
+		}
+		uniq.erase(0);
+
+		bool condition_3 = uniq.size() <= 1;
 
 		oracle[i] = (uint8_t)(condition_1 && condition_2 && condition_3);
 	}
