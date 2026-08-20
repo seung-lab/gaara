@@ -114,20 +114,16 @@ auto thin_palagyi_multilabel(const py::array& labels) {
 		);
 	});
 
+
+	const uint64_t sx = labels.shape()[0];
+	const uint64_t sy = labels.shape()[1];
+
 	py::dict py_skeletons;
 	for (const auto& [segid, skel] : skeletons) {
-		py::array_t<uint64_t> vertices(skel.vertices.size());
-		py::array_t<uint64_t> edges(skel.edges.size() * 2);
-		
-		std::memcpy(vertices.mutable_data(), skel.vertices.data(), skel.vertices.size() * sizeof(uint64_t));
 
-		auto mut = edges.mutable_data();
+		py::array vertices = vertices_to_numpy(skel, sx, sy);
+		py::array edges = edges_to_numpy(skel);
 
-		for (uint64_t i = 0; i < skel.edges.size(); i++) {
-			uint64_t j = i << 1;
-			mut[j] = skel.edges[i].first;
-			mut[j+1] = skel.edges[i].second;
-		}
 		py_skeletons[py::int_(segid)] = py::make_tuple(vertices, edges);
 	}
 
