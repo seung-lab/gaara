@@ -392,10 +392,6 @@ auto skeletonize(
 	std::list<Voxel> border_points = find_border_points(labels, label_status, sx, sy, sz);
 	std::deque<Iterator> potentially_deletable;
 
-	if (border_points.size() == 0) {
-		return border_points;
-	}
-
 	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
 
 	BorderCheckFn direction_map[6] = {

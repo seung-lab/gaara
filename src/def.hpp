@@ -6,6 +6,7 @@
 #include <fstream>
 #include <limits>
 #include <stdexcept>
+#include <vector>
 
 namespace gaara::def {
 
@@ -92,6 +93,8 @@ struct Voxel {
 struct Skeleton {
 	std::vector<uint64_t> vertices;
 	std::vector<std::pair<uint64_t, uint64_t>> edges;
+
+	Skeleton() {}
 
 	Skeleton(std::vector<uint64_t>& _vertices, std::vector<std::pair<uint64_t, uint64_t>>& _edges)
 		: vertices(_vertices), edges(_edges) {}

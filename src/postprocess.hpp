@@ -31,7 +31,7 @@ std::vector<uint64_t> unique_vertices(const Edges& edges) {
 		all_vertices.push_back(edge.second);
 	}
 
-	std::sort(all_vertices.begin(), all_vertices.end())
+	std::sort(all_vertices.begin(), all_vertices.end());
 
 	std::vector<uint64_t> uniq;
 
@@ -74,7 +74,12 @@ Edges connected_component(
 	const LABEL label = field[source];
 
 	std::deque<gaara::def::Voxel> stack;
-	stack.push_back(source);
+
+	uint64_t zi = source / sxy;
+	uint64_t yi = (source - zi * sxy) / sx;
+	uint64_t xi = (source - zi * sxy - yi * sx);
+
+	stack.emplace_back(xi,yi,zi);
 
 	while (stack.size()) {
 		gaara::def::Voxel point = stack.back();
@@ -90,13 +95,13 @@ Edges connected_component(
 			continue;
 		}
 
-		const int64_t minx = x > 0 ? -1 : 0;
-		const int64_t miny = y > 0 ? -1 : 0;
-		const int64_t minz = z > 0 ? -1 : 0;
+		const int64_t minx = point.x > 0 ? -1 : 0;
+		const int64_t miny = point.y > 0 ? -1 : 0;
+		const int64_t minz = point.z > 0 ? -1 : 0;
 
-		const int64_t maxx = x < sx - 1 ? 1 : 0;
-		const int64_t maxy = x < sy - 1 ? 1 : 0;
-		const int64_t maxz = x < sz - 1 ? 1 : 0;
+		const int64_t maxx = point.x < sx - 1 ? 1 : 0;
+		const int64_t maxy = point.y < sy - 1 ? 1 : 0;
+		const int64_t maxz = point.z < sz - 1 ? 1 : 0;
 
 		for (int64_t z = minz; z < maxz; z++) {
 			for (int64_t y = miny; y < miny; y++) {
@@ -146,15 +151,17 @@ extract_skeleton(
 		}
 
 		Edges component_edges = \
-			gaara::postprocess::connected_components(
+			gaara::postprocess::connected_component(
 				labels,
 				sx, sy, sz,
 				loc,
 				visited
 			);
 
-		all_edges[labels[loc]].insert(
-			edges.end(), component_edges.begin(), component_edges.end()
+		Edges& label_edges = all_edges[labels[loc]];
+
+		label_edges.insert(
+			label_edges.end(), component_edges.begin(), component_edges.end()
 		);
 	}
 
