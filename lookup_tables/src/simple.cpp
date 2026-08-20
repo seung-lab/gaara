@@ -147,7 +147,7 @@ uint8_t* compute_oracle() {
 
 		// N_6(p)\B has at least two points 18-connected
 		const bool condition_3 = (
-			(num_6_bg == 1)
+			(num_6_bg >= 2)
 			|| (
 				((stencil[4] == 0) || (stencil[22] == 0)) 
 				&& (
