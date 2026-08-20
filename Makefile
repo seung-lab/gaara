@@ -3,7 +3,8 @@ export CXX=clang++
 test: gaara_test.cpp
 	./automated_tests
 
-profile: test.cpp
+profile:
+	$(CXX) -g -Og -std=c++20 -Isrc -Ilibcrackle/ test.cpp -o test
 	rm -rf test_profile.trace
 	xctrace record --template "Time Profiler" --launch --output test_profile.trace --time-limit 5m -- ./test
 	open test_profile.trace
