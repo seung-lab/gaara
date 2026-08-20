@@ -218,12 +218,18 @@ TEST(Gaara, TestLine) {
 	};
 
 	gaara::binary::thin<uint8_t>(line.data(), sx, sy, sz, true);
+	EXPECT_EQ(line[1] > 0, true);
 
-	for (int x = 0; x < sx; x++) {
-		printf("%d, ", line[x]);
-	}
-	printf("\n");
-	EXPECT_EQ(line[1] > 0, 1);
+	std::vector<uint8_t> line2 = {
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 0
+	};
+
+	gaara::binary::thin<uint8_t>(line2.data(), sx, sy, sz, false);
+	EXPECT_EQ(line2[1] > 0, false);
+
+
+
+
 }
 
 TEST(Gaara, TestTorusSmall) {
