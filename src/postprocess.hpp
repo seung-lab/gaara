@@ -9,19 +9,53 @@
 #include <limits>
 #include <memory>
 #include <queue>
+#include <unordered_map>
 #include <vector>
 
 #include "def.hpp"
 
 namespace gaara::postprocess {
 
+using Edges = std::vector<std::pair<uint64_t, uint64_t>>;
+
+std::vector<uint64_t> unique_vertices(const Edges& edges) {
+	if (edges.size() == 0) {
+		return std::vector<uint64_t>();
+	}
+
+	std::vector<uint64_t> all_vertices;
+	all_vertices.reserve(edges.size() * 2);
+
+	for (auto& edge : edges) {
+		all_vertices.push_back(edge.first);
+		all_vertices.push_back(edge.second);
+	}
+
+	std::sort(all_vertices.begin(), all_vertices.end())
+
+	std::vector<uint64_t> uniq;
+
+	uint64_t last = all_vertices[0]; // guaranteed to be at least 2
+	uniq.push_back(last);
+
+	for (uint64_t i = 1; i < all_vertices.size(); i++) {
+		if (all_vertices[i] != last) {
+			uniq.push_back(all_vertices[i]);
+			last = all_vertices[i];
+		}
+	}
+
+	return uniq;
+}
+
 template <typename LABEL>
-std::vector<std::pair<uint64_t, uint64_t>> connected_component(
+Edges connected_component(
 	LABEL* field, 
 	const size_t sx, const size_t sy, const size_t sz, 
-	const size_t source
+	const size_t source,
+	std::vector<bool>& visited
 ) {
-	std::vector<std::pair<uint64_t,uint64_t>> edges;
+	Edges edges;
 
 	if (field == nullptr) {
 		return edges;
@@ -38,8 +72,6 @@ std::vector<std::pair<uint64_t, uint64_t>> connected_component(
 	}
 
 	const LABEL label = field[source];
-
-	std::vector<bool> visited(voxels);
 
 	std::deque<gaara::def::Voxel> stack;
 	stack.push_back(source);
@@ -91,6 +123,61 @@ std::vector<std::pair<uint64_t, uint64_t>> connected_component(
 	}
 
 	return edges;
+}
+
+template <typename LABEL>
+std::unordered_map<uint64_t, gaara::def::Skeleton> 
+extract_skeleton(
+	LABEL* labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {
+	const uint64_t voxels = sx * sy * sz;
+	const uint64_t sxy = sx * sy;
+
+	std::vector<bool> visited(voxels);
+
+	using Edges = std::vector<std::pair<uint64_t, uint64_t>>;
+
+	std::unordered_map<uint64_t, Edges> all_edges;
+
+	for (uint64_t loc = 0; loc < voxels; loc++) {
+		if (labels[loc] == 0 || visited[loc]) {
+			continue;
+		}
+
+		Edges component_edges = \
+			gaara::postprocess::connected_components(
+				labels,
+				sx, sy, sz,
+				loc,
+				visited
+			);
+
+		all_edges[labels[loc]].insert(
+			edges.end(), component_edges.begin(), component_edges.end()
+		);
+	}
+
+	std::unordered_map<uint64_t, gaara::def::Skeleton> all_skeletons;
+
+	for (auto [label, edges] : all_edges) {
+		std::vector<uint64_t> uniq = gaara::postprocess::unique_vertices(edges);
+		std::unordered_map<uint64_t, uint64_t> mapping;
+		mapping.reserve(uniq.size());
+
+		for (uint64_t i = 0; i < uniq.size(); i++) {
+			mapping[uniq[i]] = i;
+		}
+
+		for (auto edge : edges) {
+			edge.first = mapping[edge.first];
+			edge.second = mapping[edge.second];
+		}
+
+		all_skeletons[label] = gaara::def::Skeleton(uniq, edges);
+	}
+
+	return all_skeletons;
 }
 
 }; 

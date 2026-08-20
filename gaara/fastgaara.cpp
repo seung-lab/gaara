@@ -4,16 +4,19 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
 
-#include <cstdlib>
 #include <cmath>
+#include <cstdlib>
+#include <list>
+#include <unordered_map>
 
+#include "defs.hpp"
 #include "gaara_binary.hpp"
 #include "gaara_multilabel.hpp"
 
 namespace py = pybind11;
 
 template <typename Func>
-void dispatch_skeletonize(const py::array& labels, Func&& func) {
+auto dispatch_skeletonize(const py::array& labels, Func&& func) {
 	py::dtype dt = labels.dtype();
 	const int width = dt.itemsize();
 

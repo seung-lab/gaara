@@ -89,6 +89,14 @@ struct Voxel {
 	Voxel(uint16_t _x, uint16_t _y, uint16_t _z) : x(_x), y(_y), z(_z) {}
 };
 
+struct Skeleton {
+	std::vector<uint64_t> vertices;
+	std::vector<std::pair<uint64_t, uint64_t>> edges;
+
+	Skeleton(std::vector<uint64_t>& _vertices, std::vector<std::pair<uint64_t, uint64_t>>& _edges)
+		: vertices(_vertices), edges(_edges) {}
+};
+
 enum ThinningDirection {
 	PLUS_X = 0,
 	PLUS_Y = 1,

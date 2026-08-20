@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include "def.hpp"
+#include "postprocess.hpp"
 
 using namespace gaara::def;
 
@@ -362,6 +363,7 @@ auto find_border_points(
 	return process_block(0, sx, 0, sy, 0, sz);
 }
 
+
 template <typename LABEL>
 auto skeletonize(
 	LABEL* labels,
@@ -526,9 +528,8 @@ auto skeletonize(
 		labels[i] = labels[i] > 0;
 	}
 
-	return border_points;
+	return gaara::postprocess::extract_skeleton(labels, sx, sy, sz)[1];
 }
-
 
 };
 
