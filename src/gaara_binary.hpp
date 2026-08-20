@@ -149,7 +149,7 @@ auto find_border_points(
 
 		if (erode_border) {
 			return static_cast<bool>(
-				(xi > 0 && xi < sx - 1 && yi > 0 && yi < sy - 1 && zi > 0 && zi < sz - 1)
+				(xi >= 0 && xi < sx && yi > 0 && yi < sy - 1 && zi > 0 && zi < sz - 1)
 				&& (labels[loc] != PointStatus::BACKGROUND)
 				&& (labels[loc-sx] != PointStatus::BACKGROUND)
 				&& (labels[loc+sx] != PointStatus::BACKGROUND)
@@ -204,17 +204,38 @@ auto find_border_points(
 					if (stale_stencil == 1) {
 						pure_left = pure_middle;
 						pure_middle = pure_right;
-						pure_right = is_pure(x+1,y,z);
+						if (x < sx - 1) {
+							pure_right = is_pure(x+1,y,z);
+						}
+						else {
+							pure_right = !erode_border;
+						}
 					}
 					else if (stale_stencil >= 3) {
-						pure_right = is_pure(x+1,y,z);
+						if (x < sx - 1) {
+							pure_right = is_pure(x+1,y,z);
+						}
+						else {
+							pure_right = !erode_border;
+						}
 						pure_middle = is_pure(x,y,z);
-						pure_left = is_pure(x-1,y,z);
+						if (x > 0) {
+							pure_left = is_pure(x-1,y,z);
+						}
+						else {
+							pure_left = !erode_border;
+						}
 					}
 					else if (stale_stencil == 2) {
 						pure_left = pure_right;
-						pure_right = is_pure(x+1,y,z);
-						pure_middle = is_pure(x,y,z);
+						if (x < sx - 1) {
+							pure_right = is_pure(x+1,y,z);
+							pure_middle = is_pure(x,y,z);
+						}
+						else {
+							pure_middle = is_pure(x,y,z);
+							pure_right = !erode_border;
+						}
 					}
 					
 					if (!pure_right || !pure_middle || !pure_left) {
