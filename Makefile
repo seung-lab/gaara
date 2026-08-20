@@ -13,3 +13,7 @@ test.cpp:
 
 gaara_test.cpp:
 	$(CXX) -Og -g src/gaara_test.cpp -I/opt/homebrew/include -L/opt/homebrew/lib -lgtest -lgtest_main -std=c++17 -o automated_tests
+
+python:
+	rm -rf build
+	pip install -e . --no-build-isolation
