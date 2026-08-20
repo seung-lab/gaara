@@ -228,9 +228,9 @@ auto find_border_points(
 		const uint64_t ys, const uint64_t ye, 
 		const uint64_t zs, const uint64_t ze
 	){
-		bool pure_left = true;
-		bool pure_middle = true;
-		bool pure_right = true;
+		LABEL pure_left = 0;
+		LABEL pure_middle = 0;
+		LABEL pure_right = 0;
 
 		int stale_stencil = 3;
 
@@ -272,7 +272,7 @@ auto find_border_points(
 			pure_right = is_pure(cur,x+1,y,z);\
 		}\
 		else {\
-			pure_right = !erode_border;\
+			pure_right = erode_border ? 0 : cur;\
 		}\
 	}\
 	else if (stale_stencil >= 3) {\
@@ -280,7 +280,7 @@ auto find_border_points(
 			pure_right = is_pure(cur,x+1,y,z);\
 		}\
 		else {\
-			pure_right = !erode_border;\
+			pure_right = erode_border ? 0 : cur;\
 		}\
 		if (!pure_right) {\
 			NOT_PURE_RIGHT()\
@@ -293,7 +293,7 @@ auto find_border_points(
 			pure_left = is_pure(cur,x-1,y,z);\
 		}\
 		else {\
-			pure_left = !erode_border;\
+			pure_left = erode_border ? 0 : cur;\
 		}\
 	}\
 	else if (stale_stencil == 2) {\
@@ -307,7 +307,7 @@ auto find_border_points(
 		}\
 		else {\
 			pure_middle = is_pure(cur,x,y,z);\
-			pure_right = !erode_border;\
+			pure_right = erode_border ? 0 : cur;\
 			if (!pure_right) {\
 				NOT_PURE_RIGHT()\
 			}\
@@ -340,13 +340,13 @@ auto find_border_points(
 					
 					stale_stencil = 0;
 
-					if (!pure_right) {
+					if (pure_right != cur) {
 						NOT_PURE_RIGHT()
 					}
-					else if (!pure_middle) {
+					else if (pure_middle != cur) {
 						NOT_PURE_MIDDLE()
 					}
-					else if (!pure_left) {
+					else if (pure_left != cur) {
 						label_status.set(loc, PointStatus::BORDER);
 						border_points.emplace_back(x,y,z);
 					}
