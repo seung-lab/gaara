@@ -254,7 +254,7 @@ auto find_border_points(
 
 
 template <typename LABEL>
-auto skeletonize(
+auto thin(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
@@ -412,7 +412,15 @@ auto skeletonize(
 	for (uint64_t i = 0; i < voxels; i++) {
 		labels[i] = labels[i] > 0;
 	}
+}
 
+
+template <typename LABEL>
+auto skeletonize(
+	LABEL* labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {
+	thin(labels, sx, sy, sz);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
 }
 

@@ -253,7 +253,7 @@ auto find_border_points(
 }
 
 template <typename LABEL>
-auto skeletonize(
+void thin(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
@@ -410,7 +410,14 @@ auto skeletonize(
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z);
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z);
 	} while (number_of_deleted_points > 0);
+}
 
+template <typename LABEL>
+void skeletonize(
+	LABEL* labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
+) {
+	thin(labels, sx, sy, sz);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz);
 }
 
