@@ -148,7 +148,7 @@ auto find_border_points(
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
 		if (erode_border) {
-			return static_cast<bool>(
+			return labels[loc] * (
 				(xi >= 0 && xi < sx && yi > 0 && yi < sy - 1 && zi > 0 && zi < sz - 1)
 				&& (labels[loc] == label)
 				&& (labels[loc-sx] == label)
@@ -162,7 +162,7 @@ auto find_border_points(
 			);
 		}
 		else {
-			return static_cast<bool>(
+			return labels[loc] * (
 				(xi >= 0 && xi < sx)
 				&& (labels[loc] == label)
 				&& ((yi == 0) || (yi > 0 && labels[loc-sx] == label))
@@ -183,7 +183,7 @@ auto find_border_points(
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
 		if (erode_border) {
-			return static_cast<bool>(
+			return labels[loc] * (
 					(xi >= 0 && xi < sx && yi > 0 && yi < sy - 1 && zi < sz - 1)
 				 && (labels[loc+sxy] == label)
 				 && (labels[loc-sx+sxy] == label)
@@ -191,7 +191,7 @@ auto find_border_points(
 			);
 		}
 		else {
-			return static_cast<bool>(
+			return labels[loc] * (
 				(xi >= 0 && xi < sx)
 			 && ((zi >= sz - 1) || (zi < sz - 1 && labels[loc+sxy] == label))
 			 && ((yi == 0 || zi >= sz - 1) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == label))
@@ -206,7 +206,7 @@ auto find_border_points(
 		const uint64_t loc = xi + sx * (yi + sy * zi);
 
 		if (erode_border) {
-			return static_cast<bool>(
+			return labels[loc] * (
 				    (xi >= 0 && xi < sx && yi < sy - 1 && zi > 0 && zi < sz - 1)
 				&& (labels[loc+sx] == label)
 				&& (labels[loc+sx-sxy] == label)
@@ -214,7 +214,7 @@ auto find_border_points(
 			);
 		}
 		else {
-			return static_cast<bool>(
+			return labels[loc] * (
 				    (xi >= 0 && xi < sx)
 				&& ((yi >= sy - 1) || (yi < sy - 1 && labels[loc+sx] == label))
 				&& (((yi >= sy - 1 || zi == 0)) || (yi < sy - 1 && zi > 0 && labels[loc+sx-sxy] == label))
@@ -282,11 +282,11 @@ auto find_border_points(
 		else {\
 			pure_right = erode_border ? 0 : cur;\
 		}\
-		if (!pure_right) {\
+		if (pure_right != cur) {\
 			NOT_PURE_RIGHT()\
 		}\
 		pure_middle = is_pure_fn(cur,x,y,z);\
-		if (!pure_middle) {\
+		if (pure_middle != cur) {\
 			NOT_PURE_MIDDLE()\
 		}\
 		if (x > 0) {\
@@ -300,7 +300,7 @@ auto find_border_points(
 		pure_left = pure_right;\
 		if (x < sx - 1) {\
 			pure_right = is_pure_fn(cur,x+1,y,z);\
-			if (!pure_right) {\
+			if (pure_right != cur) {\
 				NOT_PURE_RIGHT()\
 			}\
 			pure_middle = is_pure_fn(cur,x,y,z);\
@@ -308,7 +308,7 @@ auto find_border_points(
 		else {\
 			pure_middle = is_pure_fn(cur,x,y,z);\
 			pure_right = erode_border ? 0 : cur;\
-			if (!pure_right) {\
+			if (pure_right != cur) {\
 				NOT_PURE_RIGHT()\
 			}\
 		}\
