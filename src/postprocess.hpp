@@ -105,7 +105,7 @@ Edges connected_component(
 
 		for (int64_t z = minz; z < maxz; z++) {
 			for (int64_t y = miny; y < maxy; y++) {
-				for (int64_t x = maxx; x < minx; x++) {
+				for (int64_t x = minx; x < maxx; x++) {
 					if (x == 0 && y == 0 && z == 0) {
 						continue;
 					}

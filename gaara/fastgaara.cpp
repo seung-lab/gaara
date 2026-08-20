@@ -43,7 +43,7 @@ auto dispatch_skeletonize(const py::array& labels, Func&& func) {
 }
 
 // assumes fortran order
-py::array thin_palagyi_binary(const py::array& labels) {
+auto thin_palagyi_binary(const py::array& labels) {
 	auto skel = dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 		using T = std::remove_pointer_t<decltype(data)>;
 		return gaara::binary::skeletonize<T>(
