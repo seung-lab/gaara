@@ -335,8 +335,6 @@ int64_t thin(
 				? foreground_configuration<LABEL,true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
 				: foreground_configuration<LABEL,false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
 
-			const bool is_directionally_border = border_check_fn(pt, loc);
-
 			// Palagyi's algorithm puts isthmus after simple, but they are 
 			// disjoint sets, so only one or zero should ever fire. I put
 			// isthmus first since it has a simpler condition and we can then
@@ -352,7 +350,7 @@ int64_t thin(
 				it = border_points.erase(it);
 				continue;
 			}
-			else if (is_directionally_border && simple_lut[config]) {
+			else if (border_check_fn(pt, loc) && simple_lut[config]) {
 				potentially_deletable.emplace_back(it);
 			}
 
