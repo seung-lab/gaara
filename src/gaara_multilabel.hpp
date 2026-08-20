@@ -263,6 +263,9 @@ void thin(
 	else if (sx >= gaara::def::MAX_DIM || sy >= gaara::def::MAX_DIM || sz >= gaara::def::MAX_DIM) {
 		throw std::invalid_argument("Image is larger than maximum supported dimensions.");
 	}
+	else if (sx == 0 || sy == 0 || sz == 0) {
+		return;
+	}
 
 	// enforce binary image starting point
 	const uint64_t voxels = sx * sy * sz;

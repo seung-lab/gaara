@@ -254,7 +254,7 @@ auto find_border_points(
 
 
 template <typename LABEL>
-auto thin(
+void thin(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
@@ -263,6 +263,9 @@ auto thin(
 	}
 	else if (sx >= gaara::def::MAX_DIM || sy >= gaara::def::MAX_DIM || sz >= gaara::def::MAX_DIM) {
 		throw std::invalid_argument("Image is larger than maximum supported dimensions.");
+	}
+	else if (sx == 0 || sy == 0 || sz == 0) {
+		return;
 	}
 
 	// enforce binary image starting point
