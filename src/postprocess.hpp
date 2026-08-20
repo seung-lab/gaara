@@ -157,6 +157,11 @@ extract_skeleton(
 	using Edges = std::vector<std::pair<uint64_t, uint64_t>>;
 
 	std::unordered_map<uint64_t, Edges> all_edges;
+	std::unordered_map<uint64_t, gaara::def::Skeleton> all_skeletons;
+
+	if (voxels == 0) {
+		return all_skeletons;
+	}
 
 	for (uint64_t loc = 0; loc < voxels; loc++) {
 		if (labels[loc] == 0 || visited[loc]) {
@@ -177,8 +182,6 @@ extract_skeleton(
 			label_edges.end(), component_edges.begin(), component_edges.end()
 		);
 	}
-
-	std::unordered_map<uint64_t, gaara::def::Skeleton> all_skeletons;
 
 	for (auto [label, edges] : all_edges) {
 		std::vector<uint64_t> uniq = gaara::postprocess::unique_vertices(edges);
