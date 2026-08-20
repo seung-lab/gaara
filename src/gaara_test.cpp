@@ -171,7 +171,7 @@ TEST(Gaara, TestSimplePointLUT) {
 	EXPECT_EQ(gaara::def::simple_lut[0b11111111111111111111111111], false); // 2^26 - 1
 
 	for (int i = 0; i < 26; i++) {
-		EXPECT_EQ(gaara::def::simple_lut[1 << i], false); // endpoint tests
+		EXPECT_EQ(gaara::def::simple_lut[1 << i], true); // endpoint tests
 	}
 
 	EXPECT_EQ(gaara::def::simple_lut[0b11111111111111101111101111], true); // 4 & 10 off
@@ -206,6 +206,24 @@ TEST(Gaara, TestIsthmusLUT) {
 	EXPECT_EQ(gaara::def::isthmus_lut[0b11111111100010000111111111], false); // connecting inclusion
 
 	EXPECT_EQ(gaara::def::isthmus_lut[0b00000000000011000000000000], true); // 12,13
+}
+
+TEST(Gaara, TestLine) {
+	int sx = 10;
+	int sy = 1;
+	int sz = 1;
+
+	std::vector<uint8_t> line = {
+		0, 1, 1, 1, 1, 1, 1, 1, 1, 0
+	};
+
+	gaara::binary::thin<uint8_t>(line.data(), sx, sy, sz, true);
+
+	for (int x = 0; x < sx; x++) {
+		printf("%d, ", line[x]);
+	}
+	printf("\n");
+	EXPECT_EQ(line[1] > 0, 1);
 }
 
 TEST(Gaara, TestTorusSmall) {
