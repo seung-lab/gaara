@@ -182,6 +182,32 @@ TEST(Gaara, TestSimplePointLUT) {
 
 }
 
+TEST(Gaara, TestIsthmusLUT) {
+
+	EXPECT_EQ(gaara::def::isthmus_lut[0] , false);
+	EXPECT_THROW(gaara::def::isthmus_lut[0xfffffffff] , std::runtime_error); // > num entries
+	EXPECT_EQ(gaara::def::isthmus_lut[0b11111111111111111111111111], false); // 2^26 - 1
+
+	for (int i = 0; i < 26; i++) {
+		EXPECT_EQ(gaara::def::isthmus_lut[1 << i], false); // endpoint tests
+	}
+
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00000000100000000000010000], true); // 4 & 17 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00000001100000000000010000], true); // 4 & 17,18 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00000001000000000000010000], true); // 4 & 18 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00000010000000000000010000], true); // 4 & 19 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00000100000000000000010000], true); // 4 & 20 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00001000000000000000010000], true); // 4 & 21 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00010000000000000000010000], true); // 4 & 22 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00100000000000000000010000], true); // 4 & 22 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b01000000000000000000010000], true); // 4 & 22 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b10000000000000000000010000], true); // 4 & 22 (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b11111111100000000111111111], true); // top and bottom (2 ccs)
+	EXPECT_EQ(gaara::def::isthmus_lut[0b11111111100010000111111111], false); // connecting inclusion
+
+	EXPECT_EQ(gaara::def::isthmus_lut[0b00000000000011000000000000], true); // 12,13
+}
+
 TEST(Gaara, TestTorusSmall) {
 
 	int sz = 3;
