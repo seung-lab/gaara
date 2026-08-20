@@ -237,7 +237,7 @@ auto find_border_points(
 						}
 					}
 
-					if (pure_left != cur || pure_middle != cur || pure_right != cur) {
+					if (pure_right != cur || pure_middle != cur || pure_left != cur) {
 						label_status.set(loc, PointStatus::BORDER);
 						border_points.emplace_back(x,y,z);
 					}
