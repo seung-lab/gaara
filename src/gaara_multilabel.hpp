@@ -286,22 +286,22 @@ void thin(
 
 	BorderCheckFn direction_map[6] = {
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.x > 0) && label_status[loc-1] == PointStatus::BACKGROUND;
+			return (pt.x > 0) && labels[loc-1] != labels[loc];
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.y > 0) && label_status[loc-sx] == PointStatus::BACKGROUND;
+			return (pt.y > 0) && labels[loc-sx] != labels[loc];
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.z > 0) && label_status[loc-sxy] == PointStatus::BACKGROUND;
+			return (pt.z > 0) && labels[loc-sxy] != labels[loc];
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.x < sx - 1) && label_status[loc+1] == PointStatus::BACKGROUND;
+			return (pt.x < sx - 1) && labels[loc+1] != labels[loc];
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.y < sy - 1) && label_status[loc+sx] == PointStatus::BACKGROUND;
+			return (pt.y < sy - 1) && labels[loc+sx] != labels[loc];
 		},
 		[&](const Voxel& pt, uint64_t loc) {
-			return (pt.z < sz - 1) && label_status[loc+sxy] == PointStatus::BACKGROUND;
+			return (pt.z < sz - 1) && labels[loc+sxy] != labels[loc];
 		}
 	};
 
