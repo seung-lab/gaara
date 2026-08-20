@@ -176,52 +176,6 @@ auto find_border_points(
 		}
 	};
 
-	auto is_pure_fast_z = [&](
-		const uint64_t xi, const uint64_t yi, const uint64_t zi
-	) {
-		const uint64_t loc = xi + sx * (yi + sy * zi);
-
-		if (erode_border) {
-			return static_cast<bool>(
-					(xi >= 0 && xi < sx && yi > 0 && yi < sy - 1 && zi < sz - 1)
-				 && (labels[loc+sxy] != PointStatus::BACKGROUND)
-				 && (labels[loc-sx+sxy] != PointStatus::BACKGROUND)
-				 && (labels[loc+sx+sxy] != PointStatus::BACKGROUND)
-			);
-		}
-		else {
-			return static_cast<bool>(
-				(xi >= 0 && xi < sx)
-			 && ((zi >= sz - 1) || (zi < sz - 1 && labels[loc+sxy] != PointStatus::BACKGROUND))
-			 && ((yi == 0 || zi >= sz - 1) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] != PointStatus::BACKGROUND))
-			 && ((yi >= sy - 1 || zi >= sz - 1) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
-			);
-		}
-	};
-
-	auto is_pure_fast_y = [&](
-		const uint64_t xi, const uint64_t yi, const uint64_t zi
-	) {
-		const uint64_t loc = xi + sx * (yi + sy * zi);
-
-		if (erode_border) {
-			return static_cast<bool>(
-				    (xi >= 0 && xi < sx && yi < sy - 1 && zi > 0 && zi < sz - 1)
-				&& (labels[loc+sx] != PointStatus::BACKGROUND)
-				&& (labels[loc+sx-sxy] != PointStatus::BACKGROUND)
-				&& (labels[loc+sx+sxy] != PointStatus::BACKGROUND)
-			);
-		}
-		else {
-			return static_cast<bool>(
-				    (xi >= 0 && xi < sx)
-				&& ((yi >= sy - 1) || (yi < sy - 1 && labels[loc+sx] != PointStatus::BACKGROUND))
-				&& (((yi >= sy - 1 || zi == 0)) || (yi < sy - 1 && zi > 0 && labels[loc+sx-sxy] != PointStatus::BACKGROUND))
-				&& ((yi >= sy - 1 || zi >= sz - 1) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] != PointStatus::BACKGROUND))
-			);
-		}
-	};
-
 	auto process_block = [&](
 		const uint64_t xs, const uint64_t xe, 
 		const uint64_t ys, const uint64_t ye, 
@@ -326,15 +280,7 @@ auto find_border_points(
 						continue;
 					}
 
-					if (z > zs && labels[loc-sxy] == PointStatus::FOREGROUND) {
-						FILL_STENCIL(is_pure_fast_z)
-					}
-					else if (y > ys && labels[loc-sx] == PointStatus::FOREGROUND) {
-						FILL_STENCIL(is_pure_fast_y)
-					}
-					else {
-						FILL_STENCIL(is_pure)
-					}
+					FILL_STENCIL(is_pure)
 					
 					stale_stencil = 0;
 
