@@ -1,6 +1,8 @@
 import numpy as np
 import numpy.typing as npt
 
+import osteoid
+
 from . import fastgaara
 
 __all__ = ["skeletonize"]
@@ -9,7 +11,7 @@ def skeletonize(
 	labels:npt.NDArray[np.integer],
 	binary_image:bool = False,
 	in_place:bool = False
-) -> npt.NDArray[np.integer]:
+) -> osteoid.Skeleton|dict[int,osteoid.Skeleton]:
 	"""
 	Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image.
 
@@ -40,10 +42,14 @@ def skeletonize(
 		labels = labels.view(np.uint8)
 
 	if binary_image:
-		fastgaara.thin_palagyi_binary(labels)
+		(vertices, edges) = fastgaara.thin_palagyi_binary(labels)
+		return osteoid.Skeleton(vertices, edges)
 	else:
-		fastgaara.thin_palagyi_multilabel(labels)
-
-	return labels.view(orig_dtype)
+		skeletons = fastgaara.thin_palagyi_multilabel(labels)
+		return { 
+			segid: osteoid.Skeleton(vertices, edges) 
+			for segid, (vertices, edges) in skeletons.items()
+		}
+	
 
 
