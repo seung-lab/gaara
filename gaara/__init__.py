@@ -12,7 +12,7 @@ def thin(
 	binary_image:bool = False,
 	in_place:bool = False,
 	preserve_endpoints:bool = False,
-) -> tuple[osteoid.Skeleton|dict[int,osteoid.Skeleton], npt.NDArray[np.integer]]:
+) -> npt.NDArray[np.integer]:
 	"""
 	Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image.
 
