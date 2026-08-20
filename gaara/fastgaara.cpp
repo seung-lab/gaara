@@ -86,7 +86,35 @@ py::array edges_to_numpy(const gaara::def::Skeleton& skel) {
 }
 
 // assumes fortran order
-auto thin_palagyi_binary(const py::array& labels, const bool preserve_endpoints) {
+void thin_binary(const py::array& labels, const bool preserve_endpoints) {
+	dispatch_skeletonize(labels, 
+		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+			using T = std::remove_pointer_t<decltype(data)>;
+			return gaara::binary::thin<T>(
+				data,
+				sx, sy, sz,
+				preserve_endpoints
+			);
+		}
+	);
+}
+
+// assumes fortran order
+void thin_multilabel(const py::array& labels, const bool preserve_endpoints) {
+	dispatch_skeletonize(labels, 
+		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+			using T = std::remove_pointer_t<decltype(data)>;
+			return gaara::multilabel::thin<T>(
+				data,
+				sx, sy, sz,
+				preserve_endpoints
+			);
+		}
+	);
+}
+
+// assumes fortran order
+auto skeletonize_binary(const py::array& labels, const bool preserve_endpoints) {
 	auto skel = dispatch_skeletonize(labels, 
 		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
@@ -108,7 +136,7 @@ auto thin_palagyi_binary(const py::array& labels, const bool preserve_endpoints)
 }
 
 // assumes fortran order
-auto thin_palagyi_multilabel(const py::array& labels, const bool preserve_endpoints) {
+auto skeletonize_multilabel(const py::array& labels, const bool preserve_endpoints) {
 	auto skeletons = dispatch_skeletonize(labels, 
 		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
@@ -137,6 +165,8 @@ auto thin_palagyi_multilabel(const py::array& labels, const bool preserve_endpoi
 
 PYBIND11_MODULE(fastgaara, m) {
 	m.doc() = "Python interface for Gaara C++ functions."; 
-	m.def("thin_palagyi_binary", &thin_palagyi_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image.");
-	m.def("thin_palagyi_multilabel", &thin_palagyi_multilabel, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image.");
+	m.def("thin_binary", &thin_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image.");
+	m.def("thin_multilabel", &thin_multilabel, "Perform morphological thinning using the Palagyi algorithm on a multilabel 3D image.");
+	m.def("skeletonize_binary", &skeletonize_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image and convert to skeletons.");
+	m.def("skeletonize_multilabel", &skeletonize_multilabel, "Perform morphological thinning using the Palagyi algorithm on a multilabel 3D image and convert to skeletons.");
 }
