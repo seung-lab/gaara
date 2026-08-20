@@ -413,7 +413,7 @@ auto skeletonize(
 		labels[i] = labels[i] > 0;
 	}
 
-	return gaara::postprocess::extract_skeleton(labels, sx, sy, sz)[1];
+	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
 }
 
 };

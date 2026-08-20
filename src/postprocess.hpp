@@ -139,7 +139,7 @@ Edges connected_component(
 
 template <typename LABEL>
 std::unordered_map<uint64_t, gaara::def::Skeleton> 
-extract_skeleton(
+extract_skeletons(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {

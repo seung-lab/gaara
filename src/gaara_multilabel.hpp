@@ -411,7 +411,7 @@ auto skeletonize(
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z);
 	} while (number_of_deleted_points > 0);
 
-	return gaara::postprocess::extract_skeleton(labels, sx, sy, sz);
+	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz);
 }
 
 
