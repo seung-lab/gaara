@@ -174,8 +174,8 @@ TEST(Gaara, TestSimplePointLUT) {
 		EXPECT_EQ(gaara::def::simple_lut[1 << i], true); // endpoint tests
 	}
 
-	EXPECT_EQ(gaara::def::simple_lut[0b11111111111111101111101111], true); // 4 & 10 off
-	EXPECT_EQ(gaara::def::simple_lut[0b11111111111110101111101111], true); // 4 & 10 & 12 off
+	EXPECT_EQ(gaara::def::simple_lut[0b11111111111111101111101111], false); // 4 & 10 off (not 6-connected)
+	EXPECT_EQ(gaara::def::simple_lut[0b11111111111110101111101111], false); // 4 & 10 & 12 off
 	EXPECT_EQ(gaara::def::simple_lut[0b11111111111111111111101010], true); // 0 & 2 & 4 off
 
 	EXPECT_EQ(gaara::def::simple_lut[0b00000000000000010000010000], true); // 4 & 10 (endpoint)
