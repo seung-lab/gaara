@@ -268,7 +268,7 @@ auto find_border_points(
 		pure_left = pure_middle;\
 		pure_middle = pure_right;\
 		if (x < sx - 1) {\
-			pure_right = is_pure(x+1,y,z);\
+			pure_right = is_pure_fn(x+1,y,z);\
 		}\
 		else {\
 			pure_right = !erode_border;\
@@ -276,7 +276,7 @@ auto find_border_points(
 	}\
 	else if (stale_stencil >= 3) {\
 		if (x < sx - 1) {\
-			pure_right = is_pure(x+1,y,z);\
+			pure_right = is_pure_fn(x+1,y,z);\
 		}\
 		else {\
 			pure_right = !erode_border;\
@@ -289,7 +289,7 @@ auto find_border_points(
 			NOT_PURE_MIDDLE()\
 		}\
 		if (x > 0) {\
-			pure_left = is_pure(x-1,y,z);\
+			pure_left = is_pure_fn(x-1,y,z);\
 		}\
 		else {\
 			pure_left = !erode_border;\
@@ -298,14 +298,14 @@ auto find_border_points(
 	else if (stale_stencil == 2) {\
 		pure_left = pure_right;\
 		if (x < sx - 1) {\
-			pure_right = is_pure(x+1,y,z);\
+			pure_right = is_pure_fn(x+1,y,z);\
 			if (!pure_right) {\
 				NOT_PURE_RIGHT()\
 			}\
-			pure_middle = is_pure(x,y,z);\
+			pure_middle = is_pure_fn(x,y,z);\
 		}\
 		else {\
-			pure_middle = is_pure(x,y,z);\
+			pure_middle = is_pure_fn(x,y,z);\
 			pure_right = !erode_border;\
 			if (!pure_right) {\
 				NOT_PURE_RIGHT()\
