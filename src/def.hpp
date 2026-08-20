@@ -115,13 +115,20 @@ struct TwoBitArray {
 	uint64_t m_num_entries;
 
 	TwoBitArray(const uint64_t size) {
-		m_num_entries = size;
-		m_size_bytes = (size + 3) >> 2;
-		m_data = new uint8_t[m_size_bytes]();
+		resize(size);
 	}
 
 	~TwoBitArray() {
 		delete[] m_data;
+	}
+
+	void resize(const uint64_t size) {
+		if (m_data != nullptr) {
+			delete[] m_data;
+		}
+		m_num_entries = size;
+		m_size_bytes = (size + 3) >> 2;
+		m_data = new uint8_t[m_size_bytes]();	
 	}
 
 	uint64_t size() const {

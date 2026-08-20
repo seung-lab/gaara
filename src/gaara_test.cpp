@@ -109,6 +109,7 @@ TEST(Gaara, TestFindBorderPointsMultilabel) {
 	voxels = sx * sy * sz;
 
 	std::vector<uint8_t> image(voxels);
+	label_status.resize(voxels);
 	label_status.fill(0);
 
 	for (uint64_t z = 1; z < sz-1; z++) {
