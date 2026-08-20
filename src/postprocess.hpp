@@ -126,9 +126,6 @@ Edges connected_component(
 						if (loc < neighboridx) {
 							edges.emplace_back(loc, neighboridx);
 						}
-						else {
-							edges.emplace_back(neighboridx, loc);
-						}
 					}
 				}
 			}
@@ -136,10 +133,6 @@ Edges connected_component(
 
 		visited[loc] = true;
 	}
-
-	std::sort(edges.begin(), edges.end());
-	auto it = std::unique(edges.begin(), edges.end());
-	edges.erase(it, edges.end());
 
 	return edges;
 }
