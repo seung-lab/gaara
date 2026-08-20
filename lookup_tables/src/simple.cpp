@@ -106,6 +106,7 @@ uint8_t* compute_oracle() {
 		// printf("i=%d\n", i);
 		// print_stencil(stencil);
 
+		N = 0;
 		cc3d::connected_components3d_26<uint8_t, uint8_t>(
 			stencil,
 			/*sx=*/3, /*sy=*/3, /*sz=*/3, 
