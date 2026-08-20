@@ -52,19 +52,41 @@ auto thin_palagyi_binary(const py::array& labels) {
 		);
 	});
 
+	const uint64_t sx = labels.shape()[0];
+	const uint64_t sy = labels.shape()[1];
+	const uint64_t sxy = sx * sy;
+
 	py::dict py_skeletons;
 
-	py::array_t<uint64_t> vertices(skel.vertices.size());
-	py::array_t<uint64_t> edges(skel.edges.size() * 2);
-	
-	std::memcpy(vertices.mutable_data(), skel.vertices.data(), skel.vertices.size() * sizeof(uint64_t));
+	std::vector<py::ssize_t> vertex_shape = {
+		static_cast<py::ssize_t>(skel.vertices.size()),
+		3
+	};
+	py::array_t<float> vertices(vertex_shape);
 
-	auto mut = edges.mutable_data();
+	std::vector<py::ssize_t> edge_shape = {
+		static_cast<py::ssize_t>(skel.edges.size()),
+		2
+	};
+	py::array_t<uint32_t> edges(edge_shape);
+
+	auto vmut = vertices.mutable_unchecked<2>();
+
+	for (uint64_t i = 0; i < skel.vertices.size(); i++) {
+		const uint64_t vert = skel.vertices[i];
+		const uint64_t z = vert / sxy;
+		const uint64_t y = (vert - z * sxy) / sx;
+		const uint64_t x = vert - z * sxy - sx * y;
+		vmut(i,0) = x;
+		vmut(i,1) = y;
+		vmut(i,2) = z;
+	}
+
+	auto mut = edges.mutable_unchecked<2>();
 
 	for (uint64_t i = 0; i < skel.edges.size(); i++) {
-		uint64_t j = i << 1;
-		mut[j] = skel.edges[i].first;
-		mut[j+1] = skel.edges[i].second;
+		mut(i,0) = skel.edges[i].first;
+		mut(i,1) = skel.edges[i].second;
 	}
 
 	return py::make_tuple(vertices, edges);
