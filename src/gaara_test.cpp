@@ -102,9 +102,9 @@ TEST(Gaara, TestFindBorderPointsMultilabel) {
 
 	EXPECT_EQ(border_points.size(), num_border_pts);
 
-	sx = 10;
-	sy = 10;
-	sz = 10;
+	sx = 100;
+	sy = 100;
+	sz = 100;
 
 	voxels = sx * sy * sz;
 
@@ -122,23 +122,27 @@ TEST(Gaara, TestFindBorderPointsMultilabel) {
 		}
 	}
 
-	int delta = 4;
+	int delta = 10;
+	int ct = 0;
 
 	for (uint64_t z = delta; z < sz-delta; z++) {
 		for (uint64_t y = delta; y < sy-delta; y++) {
 			for (uint64_t x = delta; x < sx-delta; x++) {
 				uint64_t loc = x + sx * (y + sy * z);
 				image[loc] = 2;
+				ct++;
 			}
 		}
 	}
+
+	EXPECT_EQ(ct, (sx-2*delta) * (sy-2*delta) * (sz-2*delta));
 
 	border_points = gaara::multilabel::find_border_points(image.data(), label_status, sx, sy, sz);
 
 	// For debugging:
 
 	// for (auto vx : border_points) {
-	// 	printf("%d %d %d\n", vx.x, vx.y, vx.z);
+	// 	printf("[%d, %d, %d],\n", vx.x, vx.y, vx.z);
 	// }
 
 	auto cube_border_size = [sx,sy,sz](int delta) {
@@ -146,7 +150,7 @@ TEST(Gaara, TestFindBorderPointsMultilabel) {
 		- (sx - 2*(delta+1)) * (sy - 2*(delta+1)) * (sz - 2*(delta+1));
 	};
 
-	EXPECT_EQ(border_points.size(), cube_border_size(1) + cube_border_size(delta) - cube_border_size(delta+1));
+	EXPECT_EQ(border_points.size(), cube_border_size(1) + cube_border_size(delta) + cube_border_size(delta-1));
 	
 	std::fill(image.begin(), image.end(), 1);
 	label_status.fill(PointStatus::FOREGROUND);

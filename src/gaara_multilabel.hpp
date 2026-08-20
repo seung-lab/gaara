@@ -150,29 +150,27 @@ auto find_border_points(
 		if (erode_border) {
 			return labels[loc] * (
 				(xi >= 0 && xi < sx && yi > 0 && yi < sy - 1 && zi > 0 && zi < sz - 1)
-				&& (labels[loc] == label)
-				&& (labels[loc-sx] == label)
-				&& (labels[loc+sx] == label)
-				&& (labels[loc-sxy] == label)
-				&& (labels[loc+sxy] == label)
-				&& (labels[loc-sx-sxy] == label)
-				&& (labels[loc+sx-sxy] == label)
-				&& (labels[loc-sx+sxy] == label)
-				&& (labels[loc+sx+sxy] == label)
+				&& (labels[loc-sx] == labels[loc])
+				&& (labels[loc+sx] == labels[loc])
+				&& (labels[loc-sxy] == labels[loc])
+				&& (labels[loc+sxy] == labels[loc])
+				&& (labels[loc-sx-sxy] == labels[loc])
+				&& (labels[loc+sx-sxy] == labels[loc])
+				&& (labels[loc-sx+sxy] == labels[loc])
+				&& (labels[loc+sx+sxy] == labels[loc])
 			);
 		}
 		else {
 			return labels[loc] * (
 				(xi >= 0 && xi < sx)
-				&& (labels[loc] == label)
-				&& ((yi == 0) || (yi > 0 && labels[loc-sx] == label))
-				&& ((yi >= sy - 1) || (yi < sy - 1 && labels[loc+sx] == label))
-				&& ((zi == 0) || (zi > 0 && labels[loc-sxy] == label))
-				&& ((zi >= sz - 1) || (zi < sz - 1 && labels[loc+sxy] == label))
-				&& ((yi == 0 || zi == 0) || (yi > 0 && zi > 0 && labels[loc-sx-sxy] == label))
-				&& ((yi >= sy - 1 || zi == 0) || (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] == label))
-				&& ((yi == 0 || zi >= sz - 1) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == label))
-				&& ((yi >= sy - 1 || zi >= sz - 1) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == label))
+				&& ((yi == 0) || (yi > 0 && labels[loc-sx] == labels[loc]))
+				&& ((yi >= sy - 1) || (yi < sy - 1 && labels[loc+sx] == labels[loc]))
+				&& ((zi == 0) || (zi > 0 && labels[loc-sxy] == labels[loc]))
+				&& ((zi >= sz - 1) || (zi < sz - 1 && labels[loc+sxy] == labels[loc]))
+				&& ((yi == 0 || zi == 0) || (yi > 0 && zi > 0 && labels[loc-sx-sxy] == labels[loc]))
+				&& ((yi >= sy - 1 || zi == 0) || (yi < sy -1 && zi > 0 && labels[loc+sx-sxy] == labels[loc]))
+				&& ((yi == 0 || zi >= sz - 1) || (yi > 0 && zi < sz - 1 && labels[loc-sx+sxy] == labels[loc]))
+				&& ((yi >= sy - 1 || zi >= sz - 1) || (yi < sy - 1 && zi < sz - 1 && labels[loc+sx+sxy] == labels[loc]))
 			);
 		}
 	};
@@ -188,86 +186,6 @@ auto find_border_points(
 
 		int stale_stencil = 3;
 
-#define NOT_PURE_RIGHT() \
-	label_status.set(loc, PointStatus::BORDER);\
-	border_points.emplace_back(x,y,z);\
-	\
-	if (x < sx - 1 && labels[loc+1] == cur) {\
-		label_status.set(loc+1, PointStatus::BORDER);\
-		border_points.emplace_back(x+1,y,z);\
-	}\
-	if (x < sx - 2 && labels[loc+2] == cur) {\
-		label_status.set(loc+2, PointStatus::BORDER);\
-		border_points.emplace_back(x+2,y,z);\
-	}\
-	\
-	x += 2;\
-	stale_stencil = 3;\
-	continue;
-
-#define NOT_PURE_MIDDLE()\
-	label_status.set(loc, PointStatus::BORDER);\
-	border_points.emplace_back(x,y,z);\
-	\
-	if (x < sx - 1 && labels[loc+1] == cur) {\
-		label_status.set(loc+1, PointStatus::BORDER);\
-		border_points.emplace_back(x+1,y,z);\
-	}\
-	\
-	x++;\
-	stale_stencil = 2;\
-	continue;
-
-#define FILL_STENCIL(is_pure_fn) \
-	if (stale_stencil == 1) {\
-		pure_left = pure_middle;\
-		pure_middle = pure_right;\
-		if (x < sx - 1) {\
-			pure_right = is_pure_fn(cur,x+1,y,z);\
-		}\
-		else {\
-			pure_right = erode_border ? 0 : cur;\
-		}\
-	}\
-	else if (stale_stencil >= 3) {\
-		if (x < sx - 1) {\
-			pure_right = is_pure_fn(cur,x+1,y,z);\
-		}\
-		else {\
-			pure_right = erode_border ? 0 : cur;\
-		}\
-		if (pure_right != cur) {\
-			NOT_PURE_RIGHT()\
-		}\
-		pure_middle = is_pure_fn(cur,x,y,z);\
-		if (pure_middle != cur) {\
-			NOT_PURE_MIDDLE()\
-		}\
-		if (x > 0) {\
-			pure_left = is_pure_fn(cur,x-1,y,z);\
-		}\
-		else {\
-			pure_left = erode_border ? 0 : cur;\
-		}\
-	}\
-	else if (stale_stencil == 2) {\
-		pure_left = pure_right;\
-		if (x < sx - 1) {\
-			pure_right = is_pure_fn(cur,x+1,y,z);\
-			if (pure_right != cur) {\
-				NOT_PURE_RIGHT()\
-			}\
-			pure_middle = is_pure_fn(cur,x,y,z);\
-		}\
-		else {\
-			pure_middle = is_pure_fn(cur,x,y,z);\
-			pure_right = erode_border ? 0 : cur;\
-			if (pure_right != cur) {\
-				NOT_PURE_RIGHT()\
-			}\
-		}\
-	}
-
 		std::list<Voxel> border_points;
 
 		for (uint64_t z = zs; z < ze; z++) {
@@ -282,17 +200,44 @@ auto find_border_points(
 						continue;
 					}
 
-					FILL_STENCIL(is_pure);
-					
-					stale_stencil = 0;
+					if (stale_stencil == 1) {
+						pure_left = pure_middle;
+						pure_middle = pure_right;
+						if (x < sx - 1) {
+							pure_right = is_pure(cur,x+1,y,z);
+						}
+						else {
+							pure_right = erode_border ? 0 : cur;
+						}
+					}
+					else if (stale_stencil >= 3) {
+						if (x < sx - 1) {
+							pure_right = is_pure(cur,x+1,y,z);
+						}
+						else {
+							pure_right = erode_border ? 0 : cur;
+						}
+						pure_middle = is_pure(cur,x,y,z);
+						if (x > 0) {
+							pure_left = is_pure(cur,x-1,y,z);
+						}
+						else {
+							pure_left = erode_border ? 0 : cur;
+						}
+					}
+					else if (stale_stencil == 2) {
+						pure_left = pure_right;
+						if (x < sx - 1) {
+							pure_right = is_pure(cur,x+1,y,z);
+							pure_middle = is_pure(cur,x,y,z);
+						}
+						else {
+							pure_middle = is_pure(cur,x,y,z);
+							pure_right = erode_border ? 0 : cur;
+						}
+					}
 
-					if (pure_right != cur) {
-						NOT_PURE_RIGHT()
-					}
-					else if (pure_middle != cur) {
-						NOT_PURE_MIDDLE()
-					}
-					else if (pure_left != cur) {
+					if (pure_left != cur || pure_middle != cur || pure_right != cur) {
 						label_status.set(loc, PointStatus::BORDER);
 						border_points.emplace_back(x,y,z);
 					}
