@@ -176,11 +176,6 @@ uint8_t* compute_oracle() {
 			)
 		);
 
-		int num_foreground = 0;
-		for (int j = 0; j < 27; j++) {
-			num_foreground += stencil[j] > 0;
-		}
-
 		oracle[i] = (uint8_t)(condition_1 && condition_2 && condition_3);
 	}
 
