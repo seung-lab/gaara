@@ -118,7 +118,13 @@ Edges connected_component(
 							(int)point.y + (int)y,
 							(int)point.z + (int)z
 						);
-						edges.emplace_back(loc, neighboridx);
+
+						if (loc < neighboridx) {
+							edges.emplace_back(loc, neighboridx);
+						}
+						else {
+							edges.emplace_back(neighboridx, loc);
+						}
 					}
 				}
 			}
