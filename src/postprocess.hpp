@@ -112,7 +112,11 @@ Edges connected_component(
 
 					const int64_t neighboridx = loc + (x + sx * y + sxy * z);
 
-					if (field[neighboridx] == label && !visited[neighboridx]) {
+					// Can't check visited here because there
+					// could be real loops in the structure that
+					// must be recorded. We'll just have to do
+					// duplicate elimination after.
+					if (field[neighboridx] == label) {
 						stack.emplace_back(
 							(int)point.x + (int)x,
 							(int)point.y + (int)y,
@@ -132,6 +136,10 @@ Edges connected_component(
 
 		visited[loc] = true;
 	}
+
+	std::sort(edges.begin(), edges.end());
+	auto it = std::unique(edges.begin(), edges.end());
+	edges.erase(it, edges.end());
 
 	return edges;
 }
