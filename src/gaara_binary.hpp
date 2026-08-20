@@ -249,10 +249,6 @@ auto find_border_points(
 		return border_points;
 	};
 
-#undef NOT_PURE_RIGHT
-#undef NOT_PURE_MIDDLE
-#undef FILL_STENCIL
-
 	return process_block(0, sx, 0, sy, 0, sz);
 }
 
