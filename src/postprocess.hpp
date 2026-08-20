@@ -103,9 +103,9 @@ Edges connected_component(
 		const int64_t maxy = point.y < sy - 1 ? 1 : 0;
 		const int64_t maxz = point.z < sz - 1 ? 1 : 0;
 
-		for (int64_t z = minz; z < maxz; z++) {
-			for (int64_t y = miny; y < maxy; y++) {
-				for (int64_t x = minx; x < maxx; x++) {
+		for (int64_t z = minz; z <= maxz; z++) {
+			for (int64_t y = miny; y <= maxy; y++) {
+				for (int64_t x = minx; x <= maxx; x++) {
 					if (x == 0 && y == 0 && z == 0) {
 						continue;
 					}
