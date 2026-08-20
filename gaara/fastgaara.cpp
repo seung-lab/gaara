@@ -42,33 +42,16 @@ auto dispatch_skeletonize(const py::array& labels, Func&& func) {
 	}
 }
 
-// assumes fortran order
-auto thin_palagyi_binary(const py::array& labels) {
-	auto skel = dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
-		using T = std::remove_pointer_t<decltype(data)>;
-		return gaara::binary::skeletonize<T>(
-			data,
-			sx, sy, sz
-		);
-	});
-
-	const uint64_t sx = labels.shape()[0];
-	const uint64_t sy = labels.shape()[1];
+py::array vertices_to_numpy(
+	const gaara::def::Skeleton& skel,
+	const uint64_t sx, const uint64_t sy
+) {
 	const uint64_t sxy = sx * sy;
-
-	py::dict py_skeletons;
-
 	std::vector<py::ssize_t> vertex_shape = {
 		static_cast<py::ssize_t>(skel.vertices.size()),
 		3
 	};
 	py::array_t<float> vertices(vertex_shape);
-
-	std::vector<py::ssize_t> edge_shape = {
-		static_cast<py::ssize_t>(skel.edges.size()),
-		2
-	};
-	py::array_t<uint32_t> edges(edge_shape);
 
 	auto vmut = vertices.mutable_unchecked<2>();
 
@@ -82,12 +65,41 @@ auto thin_palagyi_binary(const py::array& labels) {
 		vmut(i,2) = z;
 	}
 
+	return vertices;
+}
+
+py::array edges_to_numpy(const gaara::def::Skeleton& skel) {
+	std::vector<py::ssize_t> edge_shape = {
+		static_cast<py::ssize_t>(skel.edges.size()),
+		2
+	};
+	py::array_t<uint32_t> edges(edge_shape);
+
 	auto mut = edges.mutable_unchecked<2>();
 
 	for (uint64_t i = 0; i < skel.edges.size(); i++) {
 		mut(i,0) = skel.edges[i].first;
 		mut(i,1) = skel.edges[i].second;
 	}
+
+	return edges;
+}
+
+// assumes fortran order
+auto thin_palagyi_binary(const py::array& labels) {
+	auto skel = dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+		using T = std::remove_pointer_t<decltype(data)>;
+		return gaara::binary::skeletonize<T>(
+			data,
+			sx, sy, sz
+		);
+	});
+
+	const uint64_t sx = labels.shape()[0];
+	const uint64_t sy = labels.shape()[1];
+
+	py::array vertices = vertices_to_numpy(skel, sx, sy);
+	py::array edges = edges_to_numpy(skel);
 
 	return py::make_tuple(vertices, edges);
 }
