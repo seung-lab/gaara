@@ -9,7 +9,7 @@
 #include <list>
 #include <unordered_map>
 
-#include "defs.hpp"
+#include "def.hpp"
 #include "gaara_binary.hpp"
 #include "gaara_multilabel.hpp"
 
@@ -29,22 +29,22 @@ auto dispatch_skeletonize(const py::array& labels, Func&& func) {
 	void* data = const_cast<void*>(labels.data());
 
 	if (width == 1) {
-		func(static_cast<uint8_t*>(data), sx, sy, sz);
+		return func(static_cast<uint8_t*>(data), sx, sy, sz);
 	}
 	else if (width == 2) {
-		func(static_cast<uint16_t*>(data), sx, sy, sz);
+		return func(static_cast<uint16_t*>(data), sx, sy, sz);
 	}
 	else if (width == 4) {
-		func(static_cast<uint32_t*>(data), sx, sy, sz);
+		return func(static_cast<uint32_t*>(data), sx, sy, sz);
 	}
 	else {
-		func(static_cast<uint64_t*>(data), sx, sy, sz);
+		return func(static_cast<uint64_t*>(data), sx, sy, sz);
 	}
 }
 
 // assumes fortran order
 py::array thin_palagyi_binary(const py::array& labels) {
-	dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+	auto skel = dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 		using T = std::remove_pointer_t<decltype(data)>;
 		return gaara::binary::skeletonize<T>(
 			data,
@@ -52,12 +52,27 @@ py::array thin_palagyi_binary(const py::array& labels) {
 		);
 	});
 
-	return labels;
+	py::dict py_skeletons;
+
+	py::array_t<uint64_t> vertices(skel.vertices.size());
+	py::array_t<uint64_t> edges(skel.edges.size() * 2);
+	
+	std::memcpy(vertices.mutable_data(), skel.vertices.data(), skel.vertices.size() * sizeof(uint64_t));
+
+	auto mut = edges.mutable_data();
+
+	for (uint64_t i = 0; i < skel.edges.size(); i++) {
+		uint64_t j = i << 1;
+		mut[j] = skel.edges[i].first;
+		mut[j+1] = skel.edges[i].second;
+	}
+
+	return py::make_tuple(vertices, edges);
 }
 
 // assumes fortran order
-py::array thin_palagyi_multilabel(const py::array& labels) {
-	dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+auto thin_palagyi_multilabel(const py::array& labels) {
+	auto skeletons = dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 		using T = std::remove_pointer_t<decltype(data)>;
 		return gaara::multilabel::skeletonize<T>(
 			data,
@@ -65,7 +80,24 @@ py::array thin_palagyi_multilabel(const py::array& labels) {
 		);
 	});
 
-	return labels;
+	py::dict py_skeletons;
+	for (const auto& [segid, skel] : skeletons) {
+		py::array_t<uint64_t> vertices(skel.vertices.size());
+		py::array_t<uint64_t> edges(skel.edges.size() * 2);
+		
+		std::memcpy(vertices.mutable_data(), skel.vertices.data(), skel.vertices.size() * sizeof(uint64_t));
+
+		auto mut = edges.mutable_data();
+
+		for (uint64_t i = 0; i < skel.edges.size(); i++) {
+			uint64_t j = i << 1;
+			mut[j] = skel.edges[i].first;
+			mut[j+1] = skel.edges[i].second;
+		}
+		py_skeletons[py::int_(segid)] = py::make_tuple(vertices, edges);
+	}
+
+	return py_skeletons;
 }
 
 PYBIND11_MODULE(fastgaara, m) {
