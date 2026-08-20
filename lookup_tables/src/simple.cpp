@@ -181,9 +181,7 @@ uint8_t* compute_oracle() {
 			num_foreground += stencil[j] > 0;
 		}
 
-		const bool is_endpoint = (num_foreground == 1);
-
-		oracle[i] = (uint8_t)(!is_endpoint && condition_1 && condition_2 && condition_3);
+		oracle[i] = (uint8_t)(condition_1 && condition_2 && condition_3);
 	}
 
 	delete[] out_labels;
