@@ -8,7 +8,9 @@
 #include <functional>
 #include <stdexcept>
 
+#include "builtins.hpp"
 #include "def.hpp"
+#include "postprocess.hpp"
 
 using namespace gaara::def;
 
@@ -253,9 +255,11 @@ auto find_border_points(
 }
 
 template <typename LABEL>
-void thin(
+int64_t thin(
 	LABEL* labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool preserve_endpoints = false,
+	const int64_t max_iterations = -1
 ) {
 	if (labels == nullptr) {
 		throw std::invalid_argument("Null pointer provided for data.");
@@ -264,7 +268,7 @@ void thin(
 		throw std::invalid_argument("Image is larger than maximum supported dimensions.");
 	}
 	else if (sx == 0 || sy == 0 || sz == 0) {
-		return;
+		return 0;
 	}
 
 	// enforce binary image starting point
@@ -338,8 +342,13 @@ void thin(
 			// isthmus first since it has a simpler condition and we can then
 			// put the simple decision behind an if else statement to avoid
 			// some calculation.
-			if (isthmus_lut[config]) {
-				label_status.set(loc, PointStatus::ISTHMUS);
+			if (preserve_endpoints && popcount(config) == 1) {
+				labels[loc] = PointStatus::PRESERVE;
+				it = border_points.erase(it);
+				continue;				
+			}
+			else if (isthmus_lut[config]) {
+				label_status.set(loc, PointStatus::PRESERVE);
 				it = border_points.erase(it);
 				continue;
 			}
@@ -404,6 +413,7 @@ void thin(
 	};
 
 	uint64_t number_of_deleted_points = 0;
+	int64_t iterations = 0;
 	do {
 		number_of_deleted_points = 0;
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_X);
@@ -412,15 +422,19 @@ void thin(
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y);
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z);
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z);
-	} while (number_of_deleted_points > 0);
+		iterations++;
+	} while (number_of_deleted_points > 0 && (max_iterations < 0 || iterations < max_iterations));
+
+	return iterations;
 }
 
 template <typename LABEL>
 auto skeletonize(
 	LABEL* labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool preserve_endpoints = false
 ) {
-	thin(labels, sx, sy, sz);
+	thin(labels, sx, sy, sz, preserve_endpoints);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz);
 }
 

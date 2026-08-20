@@ -16,7 +16,7 @@ enum PointStatus {
 	BACKGROUND = 0,
 	FOREGROUND = 1,
 	BORDER = 2,
-	ISTHMUS = 3
+	PRESERVE = 3
 };
 
 struct OneBitArray {

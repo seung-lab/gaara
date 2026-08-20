@@ -7,10 +7,6 @@
 // 3. At least two background points the 6-connected neighborhood must touch on their
 //    edges (be 18-connected).
 //
-// Endpoints are considered "not simple" regardless of the above definition.
-// An endpoint consists of a 3x3x3 stencil around point p that contains exactly
-// one foreground voxel.
-//
 // This will generate 2^26 different permutations, which can be bit packed
 // into 8,388,608 bytes which can be saved into a compressible data file.
 
@@ -146,7 +142,7 @@ uint8_t* compute_oracle() {
 		const bool condition_2 = num_6_bg > 0;		
 
 		// N_6(p)\B has at least two points 18-connected
-		const bool condition_3 = (
+		const bool condition_3 = (num_6_bg <= 1) || (
 			(
 				((stencil[4] == 0) || (stencil[22] == 0)) 
 				&& (

@@ -86,14 +86,17 @@ py::array edges_to_numpy(const gaara::def::Skeleton& skel) {
 }
 
 // assumes fortran order
-auto thin_palagyi_binary(const py::array& labels) {
-	auto skel = dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
-		using T = std::remove_pointer_t<decltype(data)>;
-		return gaara::binary::skeletonize<T>(
-			data,
-			sx, sy, sz
-		);
-	});
+auto thin_palagyi_binary(const py::array& labels, const bool preserve_endpoints) {
+	auto skel = dispatch_skeletonize(labels, 
+		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+			using T = std::remove_pointer_t<decltype(data)>;
+			return gaara::binary::skeletonize<T>(
+				data,
+				sx, sy, sz,
+				preserve_endpoints
+			);
+		}
+	);
 
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.shape()[1];
@@ -105,15 +108,17 @@ auto thin_palagyi_binary(const py::array& labels) {
 }
 
 // assumes fortran order
-auto thin_palagyi_multilabel(const py::array& labels) {
-	auto skeletons = dispatch_skeletonize(labels, [](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
-		using T = std::remove_pointer_t<decltype(data)>;
-		return gaara::multilabel::skeletonize<T>(
-			data,
-			sx, sy, sz
-		);
-	});
-
+auto thin_palagyi_multilabel(const py::array& labels, const bool preserve_endpoints) {
+	auto skeletons = dispatch_skeletonize(labels, 
+		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+			using T = std::remove_pointer_t<decltype(data)>;
+			return gaara::multilabel::skeletonize<T>(
+				data,
+				sx, sy, sz,
+				preserve_endpoints
+			);
+		}
+	);
 
 	const uint64_t sx = labels.shape()[0];
 	const uint64_t sy = labels.shape()[1];

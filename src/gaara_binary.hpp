@@ -8,6 +8,7 @@
 #include <functional>
 #include <stdexcept>
 
+#include "builtins.hpp"
 #include "def.hpp"
 #include "postprocess.hpp"
 
@@ -254,9 +255,11 @@ auto find_border_points(
 
 
 template <typename LABEL>
-void thin(
+uint64_t thin(
 	LABEL* labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool preserve_endpoints = false,
+	const int64_t max_iterations = -1
 ) {
 	if (labels == nullptr) {
 		throw std::invalid_argument("Null pointer provided for data.");
@@ -265,7 +268,7 @@ void thin(
 		throw std::invalid_argument("Image is larger than maximum supported dimensions.");
 	}
 	else if (sx == 0 || sy == 0 || sz == 0) {
-		return;
+		return 0;
 	}
 
 	// enforce binary image starting point
@@ -284,22 +287,22 @@ void thin(
 	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
 
 	BorderCheckFn direction_map[6] = {
-		[&](const Voxel& pt, uint64_t loc) {
+		[&](const Voxel& pt, uint64_t loc) { // +x
 			return (pt.x > 0) && labels[loc-1] == PointStatus::BACKGROUND;
 		},
-		[&](const Voxel& pt, uint64_t loc) {
+		[&](const Voxel& pt, uint64_t loc) { // +y
 			return (pt.y > 0) && labels[loc-sx] == PointStatus::BACKGROUND;
 		},
-		[&](const Voxel& pt, uint64_t loc) {
+		[&](const Voxel& pt, uint64_t loc) { // +z
 			return (pt.z > 0) && labels[loc-sxy] == PointStatus::BACKGROUND;
 		},
-		[&](const Voxel& pt, uint64_t loc) {
+		[&](const Voxel& pt, uint64_t loc) { // -x
 			return (pt.x < sx - 1) && labels[loc+1] == PointStatus::BACKGROUND;
 		},
-		[&](const Voxel& pt, uint64_t loc) {
+		[&](const Voxel& pt, uint64_t loc) { // -y
 			return (pt.y < sy - 1) && labels[loc+sx] == PointStatus::BACKGROUND;
 		},
-		[&](const Voxel& pt, uint64_t loc) {
+		[&](const Voxel& pt, uint64_t loc) { // -z
 			return (pt.z < sz - 1) && labels[loc+sxy] == PointStatus::BACKGROUND;
 		}
 	};
@@ -337,8 +340,13 @@ void thin(
 			// isthmus first since it has a simpler condition and we can then
 			// put the simple decision behind an if else statement to avoid
 			// some calculation.
-			if (isthmus_lut[config]) {
-				labels[loc] = PointStatus::ISTHMUS;
+			if (preserve_endpoints && popcount(config) == 1) {
+				labels[loc] = PointStatus::PRESERVE;
+				it = border_points.erase(it);
+				continue;				
+			}
+			else if (isthmus_lut[config]) {
+				labels[loc] = PointStatus::PRESERVE;
 				it = border_points.erase(it);
 				continue;
 			}
@@ -402,6 +410,7 @@ void thin(
 	};
 
 	uint64_t number_of_deleted_points = 0;
+	uint64_t num_iterations = 0;
 	do {
 		number_of_deleted_points = 0;
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_X);
@@ -410,20 +419,24 @@ void thin(
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y);
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z);
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z);
-	} while (number_of_deleted_points > 0);
+		num_iterations++;
+	} while (number_of_deleted_points > 0 && (max_iterations < 0 || num_iterations < max_iterations));
 
 	for (uint64_t i = 0; i < voxels; i++) {
 		labels[i] = labels[i] > 0;
 	}
+
+	return num_iterations;
 }
 
 
 template <typename LABEL>
 auto skeletonize(
 	LABEL* labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool preserve_endpoints = false
 ) {
-	thin(labels, sx, sy, sz);
+	int64_t iters = thin(labels, sx, sy, sz, preserve_endpoints);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
 }
 
