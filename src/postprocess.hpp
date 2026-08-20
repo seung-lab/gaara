@@ -189,7 +189,7 @@ extract_skeleton(
 			mapping[uniq[i]] = i;
 		}
 
-		for (auto edge : edges) {
+		for (auto& edge : edges) {
 			edge.first = mapping[edge.first];
 			edge.second = mapping[edge.second];
 		}
