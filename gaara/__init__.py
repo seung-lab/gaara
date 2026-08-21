@@ -15,6 +15,7 @@ def thin(
     in_place:bool = False,
     preserve_endpoints:bool = False,
     max_iterations:int = -1,
+    return_num_deleted_points:bool = False,
 ) -> npt.NDArray[np.integer]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image.
@@ -55,11 +56,14 @@ def thin(
         labels = labels.view(np.uint8)
 
     if binary_image:
-        fastgaara.thin_binary(labels, preserve_endpoints, max_iterations)
+        num_deleted_points = fastgaara.thin_binary(labels, preserve_endpoints, max_iterations)
     else:
-        fastgaara.thin_multilabel(labels, preserve_endpoints, max_iterations)
+        num_deleted_points = fastgaara.thin_multilabel(labels, preserve_endpoints, max_iterations)
 
-    return labels
+    if return_num_deleted_points:
+        return (labels, num_deleted_points)
+    else:
+        return labels
 
 def skeletonize(
     labels:npt.NDArray[np.integer],
@@ -124,7 +128,7 @@ def thin_crackle(
     in_place:bool = False,
     preserve_endpoints:bool = False,
     memory:int = int(8e9),
-    threads:int = -1,
+    threads:int = 0,
 ) -> "CrackleArray":
     """
     Apply Palagyi's 3D voxel thinning algorithm to a CrackleArray.
@@ -150,6 +154,9 @@ def thin_crackle(
     """
     import crackle
     from crackle import CrackleArray
+    import time
+    import psutil
+    import multiprocessing as mp
 
     if isinstance(labels, bytes):
         labels = CrackleArray(labels)
@@ -162,9 +169,21 @@ def thin_crackle(
     if labels.size <= 1:
         return labels
 
-    header = labels.header()
+    if threads == 0:
+        threads = mp.cpu_count()
 
-    if (header.data_width * header.voxels() < memory):
+    header = labels.header()
+    slice_memory = header.data_width * header.sx * header.sy 
+    # Estimate of crackle per-slice decoding memory usage
+    decoding_memory = (header.data_width + 4) * slice_memory * threads # ccl + slice 
+
+    estimated_memory_requirement = header.data_width * header.voxels() + decoding_memory
+    estimated_memory_requirement += len(labels) * 2
+
+    system_memory = psutil.virtual_memory().available
+
+    if estimated_memory_requirement < memory and estimated_memory_requirement < system_memory:
+        print("lall: ", header.data_width * header.voxels())
         labels = thin(
             labels.numpy(),
             binary_image=binary_image,
@@ -173,53 +192,85 @@ def thin_crackle(
         )
         return crackle.compressa(labels, parallel=threads)
 
-    slice_memory = header.data_width * header.sx * header.sy 
-    cz = (memory // slice_memory) - 1
+    cz = (memory // decoding_memory) - 2
     cz = max(cz, 4)
-    
-    if (cz * slice_memory > memory):
+
+    estimated_memory_requirement = (cz+2) * slice_memory + decoding_memory
+    estimated_memory_requirement += len(labels) * 3
+
+    if estimated_memory_requirement > min(memory, system_memory):
         raise MemoryError(
-            f"Not enough memory to process this volume, try increasing the limit. "
-            f"Limit: {memory} bytes. "
-            f"Per slice memory usage: {slice_memory} bytes."
+            f"Not enough memory to process this volume, try increasing the limit or reducing the number of threads.\n"
+            f"User Limit: {memory} bytes\n"
+            f"Available: {system_memory} bytes\n"
+            f"Estimated memory requirement: {estimated_memory_requirement / 1e9:.1f} GB."
         )
-
-    num_chunks = int(np.ceil(header.sz / cz))
-    num_chunks = max(num_chunks, 1)
-
-    compressed_chunks = [ None ] * num_chunks
-    num_deleted_points = np.zeros([num_chunks], dtype=np.uint64)
+    
+    compressed_chunks = []
+    num_deleted_points = []
 
     iterated_labels = labels.asfortranarray()
     iterated_labels.parallel = threads
     
+    print(cz, slice_memory, memory)
+
+    num_iters = 0
+
     while True:
-        for i in range(num_chunks):
-            z = i * cz
-
-            chunk_start = std::max(0, z-1)
+        i = 0
+        while True:
+            z = (i * cz) - 1
+            chunk_start = max(0, z-1)
             chunk_end = z + cz + 1
-            chunk_end = min(sz, chunk_end)
+            chunk_end = min(header.sz, chunk_end)
 
+            print("z=",z, chunk_start, chunk_end)
+
+            s = time.perf_counter()
             arr = iterated_labels[:,:,chunk_start:chunk_end]
-            num_deleted_points[i] = thin(
+            print(f"decompress {time.perf_counter() - s:.3f}s")
+
+            s = time.perf_counter()
+            arr, N = thin(
                 arr, 
                 binary_image=binary_image,
                 preserve_endpoints=preserve_endpoints,
+                in_place=True,
                 max_iterations=1,
+                return_num_deleted_points=True,
             )
+            print(f"thinning {time.perf_counter() - s:.3f}s")
+            num_deleted_points.append(N)
             
             if chunk_start != 0:
                 arr = arr[:,:,1:]
             if chunk_end != header.sz:
                 arr = arr[:,:,:-1]
 
-            compressed_chunks[i] = crackle.compressa(arr, parallel=threads)
+            s = time.perf_counter()
+            compressed_chunks.append(
+                crackle.compressa(arr, parallel=threads)
+            )
+            print(f"compress {time.perf_counter() - s:.3f}s")
+            del arr
 
-        iterated_labels = crackle.zstack(compressed_chunks)
-        compressed_chunks = [ None ] * num_chunks
+            i += 1
 
-        if np.sum(num_deleted_points) == 0:
+            if chunk_end >= header.sz:
+                break
+
+        iterated_labels = CrackleArray(crackle.zstack(compressed_chunks))
+        iterated_labels.parallel = threads
+        
+        points_deleted_this_round = np.sum(num_deleted_points)
+        num_iters += 1
+        
+        compressed_chunks = []
+        num_deleted_points = []
+
+        print(f"deleted={points_deleted_this_round}, num_iters={num_iters}")
+
+        if points_deleted_this_round == 0:
             break
 
     return iterated_labels
