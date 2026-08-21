@@ -114,6 +114,18 @@ void thin_multilabel(const py::array& labels, const bool preserve_endpoints) {
 }
 
 // assumes fortran order
+auto thin_crackle(const py::buffer& buffer, const bool preserve_endpoints) {
+	py::buffer_info info = buffer.request();
+
+	if (info.ndim != 1) {
+		throw std::runtime_error("Expected a 1D buffer");
+	}
+
+	std::span<unsigned char> data(info.ptr, info.size);
+	return gaara::binary::thin_crackle(data, preserve_endpoints);
+}
+
+// assumes fortran order
 auto skeletonize_binary(const py::array& labels, const bool preserve_endpoints) {
 	auto skel = dispatch_skeletonize(labels, 
 		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
@@ -167,6 +179,7 @@ PYBIND11_MODULE(fastgaara, m) {
 	m.doc() = "Python interface for Gaara C++ functions."; 
 	m.def("thin_binary", &thin_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image.");
 	m.def("thin_multilabel", &thin_multilabel, "Perform morphological thinning using the Palagyi algorithm on a multilabel 3D image.");
+	m.def("thin_crackle", &thin_crackle, "Perform morphological thinning using the Palagyi algorithm on crackle array.");
 	m.def("skeletonize_binary", &skeletonize_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image and convert to skeletons.");
 	m.def("skeletonize_multilabel", &skeletonize_multilabel, "Perform morphological thinning using the Palagyi algorithm on a multilabel 3D image and convert to skeletons.");
 }
