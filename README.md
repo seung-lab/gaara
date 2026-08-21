@@ -16,8 +16,11 @@ arr = np.load(...) # some 3d array in fortran order
 # preserve_endpoints: mark endpoints 3x3x3 stencils containing exactly 2 foreground voxels
 #   for preservation. By default, the palagyi algorithm is more aggressive.
 
-arr = gaara.skeletonize(arr, binary_image=True, in_place=False, preserve_endpoints=False)
-arr = gaara.skeletonize(arr, binary_image=False, in_place=False, preserve_endpoints=False)
+skeletons, thin_arr = gaara.skeletonize(arr, binary_image=True, in_place=False, preserve_endpoints=False)
+skeletons, thin_arr = gaara.skeletonize(arr, binary_image=False, in_place=False, preserve_endpoints=False)
+
+# Perform the thinning action on the image without extracting skeletons
+thin_arr = gaara.thin(arr, binary_image=False, in_place=False, preserve_endpoints=False)
 ```
 
 Gaara is a skeletion generation via voxel thinning algorithm based on Pal&aacute;gyi's 2014 paper [1] and inspired by Matejek et al.'s work on [synapseaware](https://github.com/Rhoana/synapseaware/). [2]
