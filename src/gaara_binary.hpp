@@ -518,10 +518,10 @@ auto thin_crackle_helper(
 
 			num_deleted_points[i] = z_num_deleted_points;
 
-			LABEL* labelptr = labels.get();
+			LABEL* offset_labelptr = labels.get();
 			uint64_t compress_z = (chunk_end - chunk_start);
 			if (chunk_start != 0) {
-				labelptr += sxy;
+				offset_labelptr += sxy;
 				compress_z--;
 			}
 			if (chunk_end != head.sz) {
@@ -529,7 +529,7 @@ auto thin_crackle_helper(
 			}
 
 			auto chunk_binary = crackle::compress(
-				labelptr, header.sx, header.sy, compress_z,
+				offset_labelptr, header.sx, header.sy, compress_z,
 				/*allow_pins=*/false, 
 				/*fortran_order=*/true,
 				/*markov_model_order=*/0,
@@ -540,6 +540,8 @@ auto thin_crackle_helper(
 			);			
 
 			chunk_binaries[i] = chunk_binary;
+
+			delete[] labels;
 		}
 
 		iterated_binary = crackle::partition::zstack(chunk_binaries.begin(), chunk_binaries.end());
