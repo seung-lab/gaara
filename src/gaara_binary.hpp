@@ -6,7 +6,11 @@
 #include <deque>
 #include <list>
 #include <functional>
+#include <span>
 #include <stdexcept>
+
+#include "crackle.hpp"
+#include "partition.hpp"
 
 #include "builtins.hpp"
 #include "def.hpp"
@@ -15,7 +19,6 @@
 using namespace gaara::def;
 
 namespace gaara::binary {
-
 
 using Iterator = std::list<Voxel>::iterator;
 
@@ -391,7 +394,7 @@ uint64_t kernel(
 }
 
 template <typename LABEL>
-uint64_t thin(
+auto thin(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool preserve_endpoints = false,
@@ -435,7 +438,7 @@ uint64_t thin(
 		labels[i] = labels[i] > 0;
 	}
 
-	return num_iterations;
+	return std::make_tuple(num_iterations, number_of_deleted_points);
 }
 
 
@@ -445,9 +448,131 @@ auto skeletonize(
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool preserve_endpoints = false
 ) {
-	int64_t iters = thin(labels, sx, sy, sz, preserve_endpoints);
+	thin(labels, sx, sy, sz, preserve_endpoints);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
 }
+
+template <typename LABEL>
+auto thin_crackle_helper(
+	const std::span<const unsigned char> &binary,
+	const bool preserve_endpoints,
+	const uint64_t memory,
+	const int threads
+) {
+	crackle::CrackleHeader header(binary);
+
+	if (header.data_width * header.voxels() < memory) {
+		std::unique_ptr<LABEL[]> labels(crackle::decompress(binary, nullptr, -1, -1, threads));
+
+		thin(labels.get(), header.sx, header.sy, header.sz, preserve_endpoints);
+
+		return crackle::compress(
+			labels.get(), header.sx, header.sy, header.sz,
+			/*allow_pins=*/false, 
+			/*fortran_order=*/true,
+			/*markov_model_order=*/0,
+			/*optimize_pins=*/false,
+			/*auto_bgcolor=*/true,
+			/*manual_bgcolor=*/0,
+			threads
+		);
+	}
+
+	int64_t cz = memory / header.data_width / header.sx / header.sy;
+	
+	if (cz + 1 < 4) {
+		throw std::runtime_error("Not enough memory to process this volume. Try increasing the limit.");
+	}
+
+	int64_t num_chunks = header.sz / cz;
+	num_chunks = std::max(num_chunks, 1);
+
+	std::vector<std::vector<unsigned char>> chunk_binaries(num_chunks);
+	std::vector<uint64_t> num_deleted_points(num_chunks);
+
+	LABEL* labels = nullptr;
+
+	const uint64_t sxy = header.sx + header.sy;
+
+	std::span<unsigned char> iterated_binary = binary;
+
+	do {
+		for (int64_t z = 0, i = 0; z < header.sz; z += cz, i++) {
+			int64_t chunk_start = std::max(0, z-1);
+			int64_t chunk_end = z + cz + 1;
+			chunk_end = std::min(sz, chunk_end);
+
+			if (chunk_binaries[i].size() == 0) {
+				labels = crackle::decompress(iterated_binary, nullptr, chunk_start, chunk_end, threads);
+			}
+			else {
+				labels = crackle::decompress(chunk_binaries[i], nullptr, 0, -1, threads);
+			}
+
+			auto [num_iters, z_num_deleted_points] = thin(
+				labels.get(), 
+				header.sx, header.sy, (chunk_end-chunk_start), 
+				preserve_endpoints,
+				/*max_iterations=*/1,
+			);
+
+			num_deleted_points[i] = z_num_deleted_points;
+
+			LABEL* labelptr = labels.get();
+			uint64_t compress_z = (chunk_end - chunk_start);
+			if (chunk_start != 0) {
+				labelptr += sxy;
+				compress_z--;
+			}
+			if (chunk_end != head.sz) {
+				compress_z--;
+			}
+
+			auto chunk_binary = crackle::compress(
+				labelptr, header.sx, header.sy, compress_z,
+				/*allow_pins=*/false, 
+				/*fortran_order=*/true,
+				/*markov_model_order=*/0,
+				/*optimize_pins=*/false,
+				/*auto_bgcolor=*/true,
+				/*manual_bgcolor=*/0,
+				threads
+			);			
+
+			chunk_binaries[i] = chunk_binary;
+		}
+
+		iterated_binary = crackle::partition::zstack(chunk_binaries.begin(), chunk_binaries.end());
+		for (int i = 0; i < chunk_binaries.size(); i++) {
+			chunk_binaries[i].clear();
+		}
+	} while (std::sum(num_deleted_points.begin(), num_deleted_points.end()) != 0);
+
+	return iterated_binary;
+}
+
+auto thin_crackle(
+	const std::span<const unsigned char> &binary,
+	const bool preserve_endpoints = false,
+	const uint64_t memory = 3500000000,
+	const int threads = -1
+) {
+	crackle::CrackleHeader header(binary);
+
+	if (header.data_width == 1) {
+		return thin_crackle_helper<uint8_t>(binary, preserve_endpoints, memory, threads);
+	}
+	else if (header.data_width == 2) {
+		return thin_crackle_helper<uint16_t>(binary, preserve_endpoints, memory, threads);
+	}
+	else if (header.data_width == 4) {
+		return thin_crackle_helper<uint32_t>(binary, preserve_endpoints, memory, threads);
+	}
+	else {
+		return thin_crackle_helper<uint64_t>(binary, preserve_endpoints, memory, threads);
+	}
+}
+
 
 };
 
