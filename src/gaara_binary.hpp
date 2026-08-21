@@ -16,6 +16,9 @@ using namespace gaara::def;
 
 namespace gaara::binary {
 
+
+using Iterator = std::list<Voxel>::iterator;
+
 // map for i variable (skip center to save space)
 
 // z = -1
@@ -253,38 +256,19 @@ auto find_border_points(
 	return process_block(0, sx, 0, sy, 0, sz);
 }
 
-
 template <typename LABEL>
-uint64_t thin(
-	LABEL* labels,
+uint64_t kernel(
+	ThinningDirection direction,
+	LABEL* labels, 
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool preserve_endpoints = false,
-	const int64_t max_iterations = -1
+	std::list<Voxel>& border_points,
+	std::deque<Iterator>& potentially_deletable,
+	const bool preserve_endpoints
 ) {
-	if (labels == nullptr) {
-		throw std::invalid_argument("Null pointer provided for data.");
-	}
-	else if (sx >= gaara::def::MAX_DIM || sy >= gaara::def::MAX_DIM || sz >= gaara::def::MAX_DIM) {
-		throw std::invalid_argument("Image is larger than maximum supported dimensions.");
-	}
-	else if (sx == 0 || sy == 0 || sz == 0) {
-		return 0;
-	}
+	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
 
-	// enforce binary image starting point
 	const uint64_t voxels = sx * sy * sz;
 	const uint64_t sxy = sx * sy;
-
-	for (uint64_t i = 0; i < voxels; i++) {
-		labels[i] = labels[i] > 0; // PointStatus::BACKGROUND or FOREGROUND
-	}
-
-	using Iterator = std::list<Voxel>::iterator;
-
-	std::list<Voxel> border_points = find_border_points(labels, sx, sy, sz);
-	std::deque<Iterator> potentially_deletable;
-
-	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
 
 	BorderCheckFn direction_map[6] = {
 		[&](const Voxel& pt, uint64_t loc) { // +x
@@ -307,116 +291,143 @@ uint64_t thin(
 		}
 	};
 
-	auto kernel = [&](ThinningDirection direction) {
-		uint64_t number_of_deleted_points = 0;
-		potentially_deletable.clear();
+	uint64_t number_of_deleted_points = 0;
+	potentially_deletable.clear();
 
-		BorderCheckFn border_check_fn = direction_map[direction];
+	BorderCheckFn border_check_fn = direction_map[direction];
 
-		for (auto it = border_points.begin(); it != border_points.end();) {
-			const Voxel pt = *it;
-			const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
+	for (auto it = border_points.begin(); it != border_points.end();) {
+		const Voxel pt = *it;
+		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
 
-			// Should this ever happen?
-			if (labels[loc] != PointStatus::BORDER) {
-				it = border_points.erase(it);
-				continue;
-			}
-
-			const bool interior = (
-				pt.x > 0 && pt.x < sx - 1 
-			 && pt.y > 0 && pt.y < sy - 1
-			 && pt.z > 0 && pt.z < sz - 1
-			);
-
-			const uint32_t config = interior
-				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
-
-			// Palagyi's algorithm puts isthmus after simple, but they are 
-			// disjoint sets, so only one or zero should ever fire. I put
-			// isthmus first since it has a simpler condition and we can then
-			// put the simple decision behind an if else statement to avoid
-			// some calculation.
-			if (preserve_endpoints && popcount(config) == 1) {
-				labels[loc] = PointStatus::PRESERVE;
-				it = border_points.erase(it);
-				continue;				
-			}
-			else if (isthmus_lut[config]) {
-				labels[loc] = PointStatus::PRESERVE;
-				it = border_points.erase(it);
-				continue;
-			}
-			else if (border_check_fn(pt, loc) && simple_lut[config]) {
-				potentially_deletable.emplace_back(it);
-			}
-
-			it++;
+		// Should this ever happen?
+		if (labels[loc] != PointStatus::BORDER) {
+			it = border_points.erase(it);
+			continue;
 		}
 
-		// Phase 2
-		for (Iterator& it : potentially_deletable) {
-			const Voxel pt = *it;
-			
-			const bool interior = (
-				pt.x > 0 && pt.x < sx - 1 
-			 && pt.y > 0 && pt.y < sy - 1
-			 && pt.z > 0 && pt.z < sz - 1
-			);
+		const bool interior = (
+			pt.x > 0 && pt.x < sx - 1 
+		 && pt.y > 0 && pt.y < sy - 1
+		 && pt.z > 0 && pt.z < sz - 1
+		);
 
-			const uint32_t config = interior
-				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+		const uint32_t config = interior
+			? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
+			: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
 
-			if (!simple_lut[config]) {
-				continue;
-			}
-
-			const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
-			labels[loc] = PointStatus::BACKGROUND;
-			border_points.erase(it);
-			number_of_deleted_points++;
-
-			if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {
-				labels[loc-1] = PointStatus::BORDER;
-				border_points.emplace_back(pt.x - 1, pt.y, pt.z);
-			}
-			if (pt.y > 0 && labels[loc-sx] == PointStatus::FOREGROUND) {
-				labels[loc-sx] = PointStatus::BORDER;
-				border_points.emplace_back(pt.x, pt.y - 1, pt.z);
-			}
-			if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
-				labels[loc-sxy] = PointStatus::BORDER;
-				border_points.emplace_back(pt.x, pt.y, pt.z - 1);
-			}
-			if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
-				labels[loc+1] = PointStatus::BORDER;
-				border_points.emplace_back(pt.x + 1, pt.y, pt.z);
-			}
-			if (pt.y < sy - 1 && labels[loc+sx] == PointStatus::FOREGROUND) {
-				labels[loc+sx] = PointStatus::BORDER;
-				border_points.emplace_back(pt.x, pt.y + 1, pt.z);
-			}
-			if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
-				labels[loc+sxy] = PointStatus::BORDER;
-				border_points.emplace_back(pt.x, pt.y, pt.z + 1);
-			}
+		// Palagyi's algorithm puts isthmus after simple, but they are 
+		// disjoint sets, so only one or zero should ever fire. I put
+		// isthmus first since it has a simpler condition and we can then
+		// put the simple decision behind an if else statement to avoid
+		// some calculation.
+		if (preserve_endpoints && popcount(config) == 1) {
+			labels[loc] = PointStatus::PRESERVE;
+			it = border_points.erase(it);
+			continue;				
 		}
-	
-		return number_of_deleted_points;
-	};
+		else if (isthmus_lut[config]) {
+			labels[loc] = PointStatus::PRESERVE;
+			it = border_points.erase(it);
+			continue;
+		}
+		else if (border_check_fn(pt, loc) && simple_lut[config]) {
+			potentially_deletable.emplace_back(it);
+		}
+
+		it++;
+	}
+
+	// Phase 2
+	for (Iterator& it : potentially_deletable) {
+		const Voxel pt = *it;
+		
+		const bool interior = (
+			pt.x > 0 && pt.x < sx - 1 
+		 && pt.y > 0 && pt.y < sy - 1
+		 && pt.z > 0 && pt.z < sz - 1
+		);
+
+		const uint32_t config = interior
+			? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
+			: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+
+		if (!simple_lut[config]) {
+			continue;
+		}
+
+		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
+		labels[loc] = PointStatus::BACKGROUND;
+		border_points.erase(it);
+		number_of_deleted_points++;
+
+		if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {
+			labels[loc-1] = PointStatus::BORDER;
+			border_points.emplace_back(pt.x - 1, pt.y, pt.z);
+		}
+		if (pt.y > 0 && labels[loc-sx] == PointStatus::FOREGROUND) {
+			labels[loc-sx] = PointStatus::BORDER;
+			border_points.emplace_back(pt.x, pt.y - 1, pt.z);
+		}
+		if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
+			labels[loc-sxy] = PointStatus::BORDER;
+			border_points.emplace_back(pt.x, pt.y, pt.z - 1);
+		}
+		if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
+			labels[loc+1] = PointStatus::BORDER;
+			border_points.emplace_back(pt.x + 1, pt.y, pt.z);
+		}
+		if (pt.y < sy - 1 && labels[loc+sx] == PointStatus::FOREGROUND) {
+			labels[loc+sx] = PointStatus::BORDER;
+			border_points.emplace_back(pt.x, pt.y + 1, pt.z);
+		}
+		if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
+			labels[loc+sxy] = PointStatus::BORDER;
+			border_points.emplace_back(pt.x, pt.y, pt.z + 1);
+		}
+	}
+
+	return number_of_deleted_points;
+}
+
+template <typename LABEL>
+uint64_t thin(
+	LABEL* labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool preserve_endpoints = false,
+	const int64_t max_iterations = -1
+) {
+	if (labels == nullptr) {
+		throw std::invalid_argument("Null pointer provided for data.");
+	}
+	else if (sx >= gaara::def::MAX_DIM || sy >= gaara::def::MAX_DIM || sz >= gaara::def::MAX_DIM) {
+		throw std::invalid_argument("Image is larger than maximum supported dimensions.");
+	}
+	else if (sx == 0 || sy == 0 || sz == 0) {
+		return 0;
+	}
+
+	// enforce binary image starting point
+	const uint64_t voxels = sx * sy * sz;
+
+	for (uint64_t i = 0; i < voxels; i++) {
+		labels[i] = labels[i] > 0; // PointStatus::BACKGROUND or FOREGROUND
+	}
+
+	std::list<Voxel> border_points = find_border_points(labels, sx, sy, sz);
+	std::deque<Iterator> potentially_deletable;
 
 	uint64_t number_of_deleted_points = 0;
 	uint64_t num_iterations = 0;
+
 	do {
 		number_of_deleted_points = 0;
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_X);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_X);
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y);
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
 		num_iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || num_iterations < max_iterations));
 
