@@ -10,8 +10,8 @@
 #include <unordered_map>
 
 #include "def.hpp"
-#include "gaara_binary.hpp"
-#include "gaara_multilabel.hpp"
+#include "binary.hpp"
+#include "multilabel.hpp"
 
 namespace py = pybind11;
 
