@@ -127,8 +127,10 @@ def thin_crackle(
     binary_image:bool = False,
     in_place:bool = False,
     preserve_endpoints:bool = False,
-    memory:int = int(8e9),
+    memory:int = -1,
     threads:int = 0,
+    padding:int = 1,
+    verbose:int = 0,
 ) -> "CrackleArray":
     """
     Apply Palagyi's 3D voxel thinning algorithm to a CrackleArray.
@@ -158,6 +160,9 @@ def thin_crackle(
     import psutil
     import multiprocessing as mp
 
+    assert padding > 0 and int(padding) == padding
+    assert threads >= 0
+
     if isinstance(labels, bytes):
         labels = CrackleArray(labels)
     elif not isinstance(labels, CrackleArray):
@@ -172,18 +177,26 @@ def thin_crackle(
     if threads == 0:
         threads = mp.cpu_count()
 
+    labels = labels.asfortranarray()
     header = labels.header()
+
     slice_memory = header.data_width * header.sx * header.sy 
     # Estimate of crackle per-slice decoding memory usage
     decoding_memory = (header.data_width + 4) * slice_memory * threads # ccl + slice 
 
-    estimated_memory_requirement = header.data_width * header.voxels() + decoding_memory
-    estimated_memory_requirement += len(labels) * 2
+    estimated_memory_requirement = header.data_width * header.voxels()
+    estimated_memory_requirement *= 1.2 # for algorithm interal data structures
+    estimated_memory_requirement += decoding_memory
+    estimated_memory_requirement += len(labels) * 3
 
     system_memory = psutil.virtual_memory().available
+    if memory < 0:
+        memory = system_memory
 
     if estimated_memory_requirement < memory and estimated_memory_requirement < system_memory:
-        print("lall: ", header.data_width * header.voxels())
+        if verbose:
+            print("Processing all at once.")
+            print(f"Estimated Memory Requirement: {estimated_memory_requirement} bytes")
         labels = thin(
             labels.numpy(),
             binary_image=binary_image,
@@ -192,15 +205,20 @@ def thin_crackle(
         )
         return crackle.compressa(labels, parallel=threads)
 
-    cz = (memory // decoding_memory) - 2
-    cz = max(cz, 4)
+    estimated_memory_requirement = decoding_memory + len(labels) * 3
 
-    estimated_memory_requirement = (cz+2) * slice_memory + decoding_memory
-    estimated_memory_requirement += len(labels) * 3
+    internal_factor = 1.5 # for thinning data structures
+
+    cz = ((memory - estimated_memory_requirement) / internal_factor / slice_memory) - 2 * padding
+    cz = max(cz, 1)
+    cz = min(cz, header.sz)
+    cz = int(cz)
+
+    estimated_memory_requirement += internal_factor * min((cz + 2 * padding), header.sz) * slice_memory
 
     if estimated_memory_requirement > min(memory, system_memory):
         raise MemoryError(
-            f"Not enough memory to process this volume, try increasing the limit or reducing the number of threads.\n"
+            f"Not enough memory to process this volume, try increasing the limit, reducing the number of threads, or reducing padding.\n"
             f"User Limit: {memory} bytes\n"
             f"Available: {system_memory} bytes\n"
             f"Estimated memory requirement: {estimated_memory_requirement / 1e9:.1f} GB."
@@ -209,26 +227,39 @@ def thin_crackle(
     compressed_chunks = []
     num_deleted_points = []
 
-    iterated_labels = labels.asfortranarray()
+    iterated_labels = labels
     iterated_labels.parallel = threads
     
-    print(cz, slice_memory, memory)
+    if verbose:
+        print(f"chunk size + padding: {cz + 2 * padding}")
+        print(f"Estimated Memory Requirement: {estimated_memory_requirement} bytes")
 
     num_iters = 0
 
     while True:
+        if verbose:
+            print(f"Iteration {num_iters}")
+
         i = 0
         while True:
-            z = (i * cz) - 1
-            chunk_start = max(0, z-1)
-            chunk_end = z + cz + 1
+            z = (i * cz)
+            if z == 0:
+                chunk_start = 0
+            else:
+                chunk_start = z - padding
+
+            chunk_end = z + cz + padding
             chunk_end = min(header.sz, chunk_end)
 
-            print("z=",z, chunk_start, chunk_end)
+            if verbose > 1:
+                print(f"z = {chunk_start}:{chunk_end}")
 
             s = time.perf_counter()
             arr = iterated_labels[:,:,chunk_start:chunk_end]
-            print(f"decompress {time.perf_counter() - s:.3f}s")
+            e = time.perf_counter()
+
+            if verbose > 2:
+                print(f"decompress: {e - s:.2f}s")
 
             s = time.perf_counter()
             arr, N = thin(
@@ -236,22 +267,27 @@ def thin_crackle(
                 binary_image=binary_image,
                 preserve_endpoints=preserve_endpoints,
                 in_place=True,
-                max_iterations=1,
+                max_iterations=padding,
                 return_num_deleted_points=True,
             )
-            print(f"thinning {time.perf_counter() - s:.3f}s")
+            e = time.perf_counter()
+            if verbose > 2:
+                print(f"thinning: {e - s:.2f}s")
+
             num_deleted_points.append(N)
             
             if chunk_start != 0:
-                arr = arr[:,:,1:]
+                arr = arr[:,:,padding:]
             if chunk_end != header.sz:
-                arr = arr[:,:,:-1]
+                arr = arr[:,:,:-padding]
 
             s = time.perf_counter()
             compressed_chunks.append(
                 crackle.compressa(arr, parallel=threads)
             )
-            print(f"compress {time.perf_counter() - s:.3f}s")
+            e = time.perf_counter()
+            if verbose > 2:
+                print(f"compress: {e - s:.2f}s")
             del arr
 
             i += 1
@@ -268,7 +304,8 @@ def thin_crackle(
         compressed_chunks = []
         num_deleted_points = []
 
-        print(f"deleted={points_deleted_this_round}, num_iters={num_iters}")
+        if verbose:
+            print(f"points deleted: {points_deleted_this_round}")
 
         if points_deleted_this_round == 0:
             break
