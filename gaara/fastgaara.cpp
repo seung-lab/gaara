@@ -16,7 +16,7 @@
 namespace py = pybind11;
 
 template <typename Func>
-auto dispatch_skeletonize(const py::array& labels, Func&& func) {
+auto dispatch(const py::array& labels, Func&& func) {
 	py::dtype dt = labels.dtype();
 	const int width = dt.itemsize();
 
@@ -86,28 +86,38 @@ py::array edges_to_numpy(const gaara::def::Skeleton& skel) {
 }
 
 // assumes fortran order
-void thin_binary(const py::array& labels, const bool preserve_endpoints) {
-	dispatch_skeletonize(labels, 
-		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+auto thin_binary(
+	const py::array& labels, 
+	const bool preserve_endpoints, 
+	const int64_t max_iterations = -1
+) {
+	return dispatch(labels, 
+		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::binary::thin<T>(
 				data,
 				sx, sy, sz,
-				preserve_endpoints
+				preserve_endpoints,
+				max_iterations
 			);
 		}
 	);
 }
 
 // assumes fortran order
-void thin_multilabel(const py::array& labels, const bool preserve_endpoints) {
-	dispatch_skeletonize(labels, 
-		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+auto thin_multilabel(
+	const py::array& labels,
+	const bool preserve_endpoints,
+	const int64_t max_iterations
+) {
+	return dispatch(labels, 
+		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::multilabel::thin<T>(
 				data,
 				sx, sy, sz,
-				preserve_endpoints
+				preserve_endpoints,
+				max_iterations
 			);
 		}
 	);
@@ -115,7 +125,7 @@ void thin_multilabel(const py::array& labels, const bool preserve_endpoints) {
 
 // assumes fortran order
 auto skeletonize_binary(const py::array& labels, const bool preserve_endpoints) {
-	auto skel = dispatch_skeletonize(labels, 
+	auto skel = dispatch(labels, 
 		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::binary::skeletonize<T>(
@@ -137,7 +147,7 @@ auto skeletonize_binary(const py::array& labels, const bool preserve_endpoints) 
 
 // assumes fortran order
 auto skeletonize_multilabel(const py::array& labels, const bool preserve_endpoints) {
-	auto skeletons = dispatch_skeletonize(labels, 
+	auto skeletons = dispatch(labels, 
 		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::multilabel::skeletonize<T>(
