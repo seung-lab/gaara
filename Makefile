@@ -13,7 +13,7 @@ test.cpp:
 	$(CXX) -g -O3 -std=c++20 -Isrc -Ilibcrackle/ test.cpp -o test
 
 gaara_test.cpp:
-	$(CXX) -Og -g src/gaara_test.cpp -I/opt/homebrew/include -L/opt/homebrew/lib -lgtest -lgtest_main -std=c++17 -o automated_tests
+	$(CXX) -Og -g src/gaara_test.cpp $(shell pkg-config --cflags --libs gtest gtest_main) -std=c++17 -o automated_tests
 
 python:
 	rm -rf build
