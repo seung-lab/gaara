@@ -262,6 +262,7 @@ uint64_t kernel(
 	LABEL* labels, 
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	std::list<Voxel>& border_points,
+	std::list<Voxel>& interior_border_points,
 	std::deque<Iterator>& potentially_deletable,
 	const bool preserve_endpoints
 ) {
@@ -289,31 +290,38 @@ uint64_t kernel(
 			return (pt.z < sz - 1) && labels[loc+sxy] == PointStatus::BACKGROUND;
 		}
 	};
+	BorderCheckFn interior_direction_map[6] = {
+		[&](const Voxel& pt, uint64_t loc) { // +x
+			return labels[loc-1] == PointStatus::BACKGROUND;
+		},
+		[&](const Voxel& pt, uint64_t loc) { // +y
+			return labels[loc-sx] == PointStatus::BACKGROUND;
+		},
+		[&](const Voxel& pt, uint64_t loc) { // +z
+			return labels[loc-sxy] == PointStatus::BACKGROUND;
+		},
+		[&](const Voxel& pt, uint64_t loc) { // -x
+			return labels[loc+1] == PointStatus::BACKGROUND;
+		},
+		[&](const Voxel& pt, uint64_t loc) { // -y
+			return labels[loc+sx] == PointStatus::BACKGROUND;
+		},
+		[&](const Voxel& pt, uint64_t loc) { // -z
+			return labels[loc+sxy] == PointStatus::BACKGROUND;
+		}
+	};
 
 	uint64_t number_of_deleted_points = 0;
 	potentially_deletable.clear();
 
 	BorderCheckFn border_check_fn = direction_map[direction];
+	BorderCheckFn interior_border_check_fn = interior_direction_map[direction];
 
 	for (auto it = border_points.begin(); it != border_points.end();) {
 		const Voxel pt = *it;
 		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
 
-		// Should this ever happen?
-		if (labels[loc] != PointStatus::BORDER) {
-			it = border_points.erase(it);
-			continue;
-		}
-
-		const bool interior = (
-			pt.x > 0 && pt.x < sx - 1 
-		 && pt.y > 0 && pt.y < sy - 1
-		 && pt.z > 0 && pt.z < sz - 1
-		);
-
-		const uint32_t config = interior
-			? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-			: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+		const uint32_t config = foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
 
 		// Palagyi's algorithm puts isthmus after simple, but they are 
 		// disjoint sets, so only one or zero should ever fire. I put
@@ -331,6 +339,34 @@ uint64_t kernel(
 			continue;
 		}
 		else if (border_check_fn(pt, loc) && simple_lut[config]) {
+			potentially_deletable.emplace_back(it);
+		}
+
+		it++;
+	}
+
+	for (auto it = interior_border_points.begin(); it != interior_border_points.end();) {
+		const Voxel pt = *it;
+		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
+
+		const uint32_t config = foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+		
+		// Palagyi's algorithm puts isthmus after simple, but they are 
+		// disjoint sets, so only one or zero should ever fire. I put
+		// isthmus first since it has a simpler condition and we can then
+		// put the simple decision behind an if else statement to avoid
+		// some calculation.
+		if (preserve_endpoints && popcount(config) == 1) {
+			labels[loc] = PointStatus::PRESERVE;
+			it = interior_border_points.erase(it);
+			continue;				
+		}
+		else if (isthmus_lut[config]) {
+			labels[loc] = PointStatus::PRESERVE;
+			it = interior_border_points.erase(it);
+			continue;
+		}
+		else if (interior_border_check_fn(pt, loc) && simple_lut[config]) {
 			potentially_deletable.emplace_back(it);
 		}
 
@@ -362,27 +398,57 @@ uint64_t kernel(
 
 		if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {
 			labels[loc-1] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x - 1, pt.y, pt.z);
+			if (interior) {
+				interior_border_points.emplace_back(pt.x - 1, pt.y, pt.z);
+			}
+			else {
+				border_points.emplace_back(pt.x - 1, pt.y, pt.z);
+			}
 		}
 		if (pt.y > 0 && labels[loc-sx] == PointStatus::FOREGROUND) {
 			labels[loc-sx] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x, pt.y - 1, pt.z);
+			if (interior) {
+				interior_border_points.emplace_back(pt.x, pt.y - 1, pt.z);
+			}
+			else {
+				border_points.emplace_back(pt.x, pt.y - 1, pt.z);
+			}
 		}
 		if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
 			labels[loc-sxy] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x, pt.y, pt.z - 1);
+			if (interior) {
+				interior_border_points.emplace_back(pt.x, pt.y, pt.z - 1);
+			}
+			else {
+				border_points.emplace_back(pt.x, pt.y, pt.z - 1);
+			}
 		}
 		if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
 			labels[loc+1] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x + 1, pt.y, pt.z);
+			if (interior) {
+				interior_border_points.emplace_back(pt.x + 1, pt.y, pt.z);
+			}
+			else {
+				border_points.emplace_back(pt.x + 1, pt.y, pt.z);
+			}
 		}
 		if (pt.y < sy - 1 && labels[loc+sx] == PointStatus::FOREGROUND) {
 			labels[loc+sx] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x, pt.y + 1, pt.z);
+			if (interior) {
+				interior_border_points.emplace_back(pt.x, pt.y + 1, pt.z);
+			}
+			else {
+				border_points.emplace_back(pt.x, pt.y + 1, pt.z);
+			}
 		}
 		if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
 			labels[loc+sxy] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x, pt.y, pt.z + 1);
+			if (interior) {
+				interior_border_points.emplace_back(pt.x, pt.y, pt.z + 1);
+			}
+			else {
+				border_points.emplace_back(pt.x, pt.y, pt.z + 1);
+			}
 		}
 	}
 
@@ -414,6 +480,23 @@ uint64_t thin(
 	}
 
 	std::list<Voxel> border_points = find_border_points(labels, sx, sy, sz);
+	std::list<Voxel> interior_border_points;
+
+	for (auto it = border_points.begin(); it != border_points.end(); it++) {
+		Voxel& pt = *it;
+
+		const bool interior = (
+			pt.x > 0 && pt.x < sx - 1 
+		 && pt.y > 0 && pt.y < sy - 1
+		 && pt.z > 0 && pt.z < sz - 1
+		);
+
+		if (interior) {
+			interior_border_points.emplace_back(pt);
+			it = border_points.erase(it);
+		}
+	}
+
 	std::deque<Iterator> potentially_deletable;
 
 	uint64_t number_of_deleted_points = 0;
@@ -421,12 +504,12 @@ uint64_t thin(
 
 	do {
 		number_of_deleted_points = 0;
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, sx, sy, sz, border_points, interior_border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, sx, sy, sz, border_points, interior_border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y, labels, sx, sy, sz, border_points, interior_border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, sx, sy, sz, border_points, interior_border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z, labels, sx, sy, sz, border_points, interior_border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z, labels, sx, sy, sz, border_points, interior_border_points, potentially_deletable, preserve_endpoints);
 		num_iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || num_iterations < max_iterations));
 
