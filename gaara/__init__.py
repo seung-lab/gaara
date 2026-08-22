@@ -368,6 +368,7 @@ def skeletonize_crackle(
     estimated_memory_requirement *= internal_factor # for algorithm interal data structures
     estimated_memory_requirement += decoding_memory
     estimated_memory_requirement += len(labels) + len(thinned_labels)
+    estimated_memory_requirement = int(estimated_memory_requirement)
 
     if estimated_memory_requirement < memory and estimated_memory_requirement < system_memory:
         if verbose:
@@ -384,6 +385,7 @@ def skeletonize_crackle(
     cz = int(cz)
 
     estimated_memory_requirement += internal_factor * min(cz, header.sz) * slice_memory
+    estimated_memory_requirement = int(estimated_memory_requirement)
 
     if estimated_memory_requirement > min(memory, system_memory):
         raise MemoryError(
@@ -417,23 +419,5 @@ def skeletonize_crackle(
         skeletons[segid] = skel.consolidate()
 
     return skeletons
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
