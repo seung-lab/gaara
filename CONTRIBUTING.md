@@ -56,8 +56,7 @@ pip install virtualenvwrapper
 mkvirtualenv -p python3.13 gaara
 workon gaara
 git clone https://github.com/seung-lab/gaara.git
-# --no-build-isolation required for editable installs using meson
-pip install -e . --no-build-isolation
+make python
 ```
 
 ## Running Tests
