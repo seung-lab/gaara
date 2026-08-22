@@ -39,6 +39,7 @@ pip install gaara
 
 If you are installing from source, ensure the lookup tables have been generated (they should be stored in version control). You can regenerate them using `make` in the lookup_tables directory. It takes about a minute to compute them.
 
+Note that the Python version uses static linking using generated `.hpp` files that is triggered by the C++ macro `GAARA_STATICALLY_LINK_LUTS`. This inflates the size of the binary by ~16MB.
 
 ## References
 
