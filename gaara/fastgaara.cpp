@@ -176,11 +176,11 @@ auto skeletonize_multilabel(const py::array& labels, const bool preserve_endpoin
 
 auto extract_skeletons(const py::array& labels) {
 	auto skeletons = dispatch(labels, 
-		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::postprocess::extract_skeletons<T>(
 				data,
-				sx, sy, sz,
+				sx, sy, sz
 			);
 		}
 	);
