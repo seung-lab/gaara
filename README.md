@@ -42,8 +42,10 @@ Gaara attempts to be an efficient voxel thinning algorithm implementation that c
 The PyPI page is located [here](https://pypi.org/project/gaara/).
 
 ```bash
-pip install gaara
+pip install "gaara[big]"
 ```
+
+The optional "big" dependency will enable support for CrackleArray skeletonization, which supports volumes larger than RAM.
 
 If you are installing from source, ensure the lookup tables have been generated (they should be stored in version control). You can regenerate them using `make` in the lookup_tables directory. It takes about a minute to compute them.
 
