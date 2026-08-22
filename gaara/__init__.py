@@ -327,11 +327,8 @@ def thin_crackle(
 
 def extract_skeletons_crackle(
     labels:Union["CrackleArray", bytes],
-    binary_image:bool = False,
-    preserve_endpoints:bool = False,
     memory:int = -1,
     threads:int = 0,
-    padding:int = 1,
     verbose:int = 0,
 ) -> dict[int, osteoid.Skeleton]:
     import crackle
@@ -354,6 +351,7 @@ def extract_skeletons_crackle(
         threads = mp.cpu_count()
 
     labels = labels.asfortranarray()
+    header = labels.header()
 
     slice_memory = header.data_width * header.sx * header.sy 
     # Estimate of crackle per-slice decoding memory usage
@@ -368,7 +366,7 @@ def extract_skeletons_crackle(
     estimated_memory_requirement = header.data_width * header.voxels()
     estimated_memory_requirement *= internal_factor # for algorithm interal data structures
     estimated_memory_requirement += decoding_memory
-    estimated_memory_requirement += len(labels) + len(thinned_labels)
+    estimated_memory_requirement += len(labels)
     estimated_memory_requirement = int(estimated_memory_requirement)
 
     if estimated_memory_requirement < memory and estimated_memory_requirement < system_memory:
@@ -376,9 +374,13 @@ def extract_skeletons_crackle(
             print("Processing all at once.")
             print(f"Estimated Memory Requirement: {estimated_memory_requirement} bytes")
         
-        return fastgaara.extract_skeletons(labels.numpy())
+        skeletons = fastgaara.extract_skeletons(labels.numpy())
+        return { 
+            segid: osteoid.Skeleton(vertices, edges, segid=segid)
+            for segid, (vertices, edges) in skeletons.items()
+        }
 
-    estimated_memory_requirement = decoding_memory + len(labels) + len(thinned_labels)
+    estimated_memory_requirement = decoding_memory + len(labels)
 
     cz = ((memory - estimated_memory_requirement) / internal_factor / slice_memory)
     cz = max(cz, 1)
@@ -390,7 +392,7 @@ def extract_skeletons_crackle(
 
     if estimated_memory_requirement > min(memory, system_memory):
         raise MemoryError(
-            f"Not enough memory to process this volume, try increasing the limit, reducing the number of threads, or reducing padding.\n"
+            f"Not enough memory to process this volume, try increasing the limit or reducing the number of threads.\n"
             f"User Limit: {memory} bytes\n"
             f"Available: {system_memory} bytes\n"
             f"Estimated memory requirement: {estimated_memory_requirement / 1e9:.1f} GB."
@@ -402,9 +404,15 @@ def extract_skeletons_crackle(
     for i in range(num_chunks):
         z_start = i * cz
         z_end = min((i+1) * cz, header.sz)
-        arr = thinned_labels[:,:, z_start:z_end ]
+        arr = labels[:,:, z_start:z_end ]
         arr_skeletons = fastgaara.extract_skeletons(arr)
         del arr
+
+        arr_skeletons = { 
+            segid: osteoid.Skeleton(vertices, edges, segid=segid)
+            for segid, (vertices, edges) in arr_skeletons.items()
+        }
+
 
         for segid in arr_skeletons.keys():
             if segid not in skeletons:
