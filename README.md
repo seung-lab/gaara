@@ -29,6 +29,22 @@ skeletons, thin_arr = gaara.skeletonize(arr, binary_image=False, in_place=False,
 
 # Perform the thinning action on the image without extracting skeletons
 thin_arr = gaara.thin(arr, binary_image=False, in_place=False, preserve_endpoints=False)
+
+# For images larger than RAM
+import crackle
+compressed_array = crackle.aload("image.ckl")
+result_array = gaara.thin_crackle(
+    compressed_array,
+    binary_image=True,
+    preserve_endpoints=False,
+    memory=int(20e9), # Set a RAM amount you are comfortable with
+    threads = 2, # Go faster, but uses more RAM and so smaller chunks sizes
+    padding = 1, # Perform more thinning iterations per a chunk
+    verbose = 0, # Levels: 1 (iteration info), 2 (+chunk info), 3 (+timings)
+    fill_holes = True, # by default fill holes on each chunk
+)
+
+skeletons = gaara.extract_skeletons_crackle(result_array)
 ```
 
 Gaara is a skeletion generation via voxel thinning algorithm based on Pal&aacute;gyi's 2014 paper [1] and inspired by Matejek et al.'s work on [synapseaware](https://github.com/Rhoana/synapseaware/). [2]
