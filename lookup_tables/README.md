@@ -58,7 +58,11 @@ bool is_isthmus = (is_isthmus_data[i] >> (i & 0b111)) & 0b1;
 
 printf("simple: %d isthmus: %d\n", is_simple, is_isthmus);
 ```
+### Static Linking
 
+Locating data files can cause problems for distribution, so `simple.hpp` and `isthmus.hpp` are generated too, which can be included in a C++ program to give access to the lookup table.
+
+The files are large, but will compile down to approximately the size of the bin files. This will inflate the size of your binary by 16 MB and increase compile times.
 
 
 
