@@ -188,6 +188,7 @@ def thin_crackle(
     estimated_memory_requirement *= 1.2 # for algorithm interal data structures
     estimated_memory_requirement += decoding_memory
     estimated_memory_requirement += len(labels) * 3
+    estimated_memory_requirement = int(estimated_memory_requirement)
 
     system_memory = psutil.virtual_memory().available
     if memory < 0:
@@ -215,6 +216,7 @@ def thin_crackle(
     cz = int(cz)
 
     estimated_memory_requirement += internal_factor * min((cz + 2 * padding), header.sz) * slice_memory
+    estimated_memory_requirement = int(estimated_memory_requirement)
 
     if estimated_memory_requirement > min(memory, system_memory):
         raise MemoryError(
