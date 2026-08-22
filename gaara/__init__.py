@@ -420,18 +420,3 @@ def skeletonize_crackle(
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
