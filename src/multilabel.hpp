@@ -412,6 +412,7 @@ int64_t thin(
 
 	uint64_t number_of_deleted_points = 0;
 	int64_t iterations = 0;
+	
 	do {
 		number_of_deleted_points = 0;
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_X);

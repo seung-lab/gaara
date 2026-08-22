@@ -417,7 +417,7 @@ uint64_t thin(
 	std::deque<Iterator> potentially_deletable;
 
 	uint64_t number_of_deleted_points = 0;
-	uint64_t num_iterations = 0;
+	int64_t num_iterations = 0;
 
 	do {
 		number_of_deleted_points = 0;
