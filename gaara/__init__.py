@@ -314,7 +314,7 @@ def thin_crackle(
     return iterated_labels
 
 
-def skeletonize_crackle(
+def extract_skeletons_crackle(
     labels:Union["CrackleArray", bytes],
     binary_image:bool = False,
     preserve_endpoints:bool = False,
@@ -322,7 +322,7 @@ def skeletonize_crackle(
     threads:int = 0,
     padding:int = 1,
     verbose:int = 0,
-) -> "CrackleArray":
+) -> dict[int, osteoid.Skeleton]:
     import crackle
     from crackle import CrackleArray
     import time
@@ -343,16 +343,6 @@ def skeletonize_crackle(
         threads = mp.cpu_count()
 
     labels = labels.asfortranarray()
-
-    thinned_labels = thin_crackle(
-        labels,
-        binary_image=binary_image,
-        preserve_endpoints=preserve_endpoints,
-        memory=memory,
-        threads=threads,
-        padding=padding,
-        verbose=verbose,
-    )
 
     slice_memory = header.data_width * header.sx * header.sy 
     # Estimate of crackle per-slice decoding memory usage
