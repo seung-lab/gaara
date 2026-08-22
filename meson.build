@@ -15,10 +15,10 @@ numpy_incdir = run_command(py, ['-c', 'import numpy; print(numpy.get_include())'
 
 src_files = files('gaara/fastgaara.cpp')
 
-install_data(
-  ['lookup_tables/tables/simple.bin', 'lookup_tables/tables/isthmus.bin'],
-  install_dir: py.get_install_dir() / 'lookup_tables' / 'tables',
-)
+# install_data(
+#   ['lookup_tables/tables/simple.bin', 'lookup_tables/tables/isthmus.bin'],
+#   install_dir: py.get_install_dir() / 'lookup_tables' / 'tables',
+# )
 
 py.install_sources(
   'gaara/__init__.py',
@@ -34,6 +34,7 @@ target = py.extension_module(
     include_directories(numpy_incdir),
     include_directories(pybind11_incdir),
   ],
+  cpp_args: ['-DGAARA_STATICALLY_LINK_LUTS'],
   install: true,
   subdir: 'gaara',
 )
