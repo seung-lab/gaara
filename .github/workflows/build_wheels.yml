@@ -6,7 +6,8 @@ on:
       - '*'
 
 env:
-  CIBW_SKIP: pp* *-manylinux_i686 *-musllinux* cp36* cp37* cp38*
+  # cp315t is new, needs cryptography to have wheels available (8/22/26)
+  CIBW_SKIP: pp* *-manylinux_i686 cp36* cp37* cp38* cp315t* 
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
