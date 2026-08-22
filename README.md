@@ -4,8 +4,16 @@ Skeleton thinning algorithm for large images.
 ```python
 import gaara
 import numpy as np
+import fill_voids
 
 arr = np.load(...) # some 3d array in fortran order
+
+# While holes are fine, cavities are non-sensical for
+# a topological thinning algorithm. You'll get a result
+# containing hulls that can't be thinned, and the 
+# performance will suffer. So make sure you have no
+# cavities! Your dentist will thank you.
+arr = fill_voids.fill(arr, in_place=True)
 
 # binary images are more efficient to process
 # 80% of the memory and faster.
