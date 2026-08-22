@@ -12,6 +12,7 @@
 #include "def.hpp"
 #include "binary.hpp"
 #include "multilabel.hpp"
+#include "postprocess.hpp"
 
 namespace py = pybind11;
 
@@ -173,10 +174,38 @@ auto skeletonize_multilabel(const py::array& labels, const bool preserve_endpoin
 	return py_skeletons;
 }
 
+auto extract_skeletons(const py::array& labels) {
+	auto skeletons = dispatch(labels, 
+		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+			using T = std::remove_pointer_t<decltype(data)>;
+			return gaara::postprocess::extract_skeletons<T>(
+				data,
+				sx, sy, sz,
+			);
+		}
+	);
+
+	const uint64_t sx = labels.shape()[0];
+	const uint64_t sy = labels.shape()[1];
+
+	py::dict py_skeletons;
+	for (const auto& [segid, skel] : skeletons) {
+
+		py::array vertices = vertices_to_numpy(skel, sx, sy);
+		py::array edges = edges_to_numpy(skel);
+
+		py_skeletons[py::int_(segid)] = py::make_tuple(vertices, edges);
+	}
+
+	return py_skeletons;
+}
+
+
 PYBIND11_MODULE(fastgaara, m) {
 	m.doc() = "Python interface for Gaara C++ functions."; 
 	m.def("thin_binary", &thin_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image.");
 	m.def("thin_multilabel", &thin_multilabel, "Perform morphological thinning using the Palagyi algorithm on a multilabel 3D image.");
 	m.def("skeletonize_binary", &skeletonize_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image and convert to skeletons.");
 	m.def("skeletonize_multilabel", &skeletonize_multilabel, "Perform morphological thinning using the Palagyi algorithm on a multilabel 3D image and convert to skeletons.");
+	m.def("extract_skeletons", &extract_skeletons, "Given a thinned image, extract the skeletons. This is just the second step broken out.");
 }
