@@ -267,7 +267,6 @@ uint64_t kernel(
 ) {
 	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
 
-	const uint64_t voxels = sx * sy * sz;
 	const uint64_t sxy = sx * sy;
 
 	BorderCheckFn direction_map[6] = {
@@ -445,7 +444,7 @@ auto skeletonize(
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool preserve_endpoints = false
 ) {
-	int64_t iters = thin(labels, sx, sy, sz, preserve_endpoints);
+	thin(labels, sx, sy, sz, preserve_endpoints);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
 }
 
