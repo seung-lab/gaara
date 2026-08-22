@@ -7,8 +7,9 @@ name = "gaara"
 version = "0.3.0"
 requires-python = ">=3.10"
 dependencies = ["numpy", "osteoid"]
-author = "William Silversmith"
-author_email = "ws9@princeton.edu"
+authors = [
+    { name = "William Silversmith", email = "ws9@princeton.edu" }
+]
 description = "Skeleton generation via 3D voxel thinning."
 readme = "README.md"
 license = "BSD-3-Clause"
