@@ -31,6 +31,7 @@ skeletons, thin_arr = gaara.skeletonize(arr, binary_image=False, in_place=False,
 thin_arr = gaara.thin(arr, binary_image=False, in_place=False, preserve_endpoints=False)
 
 # For images larger than RAM
+# requires the "big" extra install dependency
 import crackle
 compressed_array = crackle.aload("image.ckl")
 result_array = gaara.thin_crackle(
