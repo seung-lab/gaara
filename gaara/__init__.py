@@ -130,6 +130,7 @@ def thin_crackle(
     threads:int = 0,
     padding:int = 1,
     verbose:int = 0,
+    fill_holes:bool = True,
 ) -> "CrackleArray":
     """
     Apply Palagyi's 3D voxel thinning algorithm to a CrackleArray.
@@ -153,11 +154,13 @@ def thin_crackle(
     Cham: Springer International Publishing, 2014, pp. 406–415.
     doi: 10.1007/978-3-319-14364-4_39.
     """
+    import multiprocessing as mp
+    import time
+
     import crackle
     from crackle import CrackleArray
-    import time
+    import fill_voids
     import psutil
-    import multiprocessing as mp
 
     assert padding > 0 and int(padding) == padding
     assert threads >= 0
@@ -261,6 +264,14 @@ def thin_crackle(
 
             if verbose > 2:
                 print(f"decompress: {e - s:.2f}s")
+
+            if fill_holes:
+                s = time.perf_counter()
+                arr = fill_voids.fill(arr, in_place=True)
+                e = time.perf_counter()
+
+                if verbose > 2:
+                    print(f"fill_voids: {e - s:.2f}s")
 
             s = time.perf_counter()
             arr, N = thin(
