@@ -435,7 +435,7 @@ uint64_t thin(
 		labels[i] = labels[i] > 0;
 	}
 
-	return num_iterations;
+	return number_of_deleted_points;
 }
 
 

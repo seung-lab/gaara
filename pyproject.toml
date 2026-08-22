@@ -30,6 +30,9 @@ classifiers = [
     "Topic :: Utilities",
 ]
 
+[project.optional-dependencies]
+big = ["crackle-codec", "psutil"]
+
 [project.urls]
 Homepage = "https://github.com/seung-lab/gaara/"
 Repository = "https://github.com/seung-lab/gaara/"

@@ -10,13 +10,14 @@
 #include <unordered_map>
 
 #include "def.hpp"
-#include "gaara_binary.hpp"
-#include "gaara_multilabel.hpp"
+#include "binary.hpp"
+#include "multilabel.hpp"
+#include "postprocess.hpp"
 
 namespace py = pybind11;
 
 template <typename Func>
-auto dispatch_skeletonize(const py::array& labels, Func&& func) {
+auto dispatch(const py::array& labels, Func&& func) {
 	py::dtype dt = labels.dtype();
 	const int width = dt.itemsize();
 
@@ -86,28 +87,38 @@ py::array edges_to_numpy(const gaara::def::Skeleton& skel) {
 }
 
 // assumes fortran order
-void thin_binary(const py::array& labels, const bool preserve_endpoints) {
-	dispatch_skeletonize(labels, 
-		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+auto thin_binary(
+	const py::array& labels, 
+	const bool preserve_endpoints, 
+	const int64_t max_iterations = -1
+) {
+	return dispatch(labels, 
+		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::binary::thin<T>(
 				data,
 				sx, sy, sz,
-				preserve_endpoints
+				preserve_endpoints,
+				max_iterations
 			);
 		}
 	);
 }
 
 // assumes fortran order
-void thin_multilabel(const py::array& labels, const bool preserve_endpoints) {
-	dispatch_skeletonize(labels, 
-		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+auto thin_multilabel(
+	const py::array& labels,
+	const bool preserve_endpoints,
+	const int64_t max_iterations
+) {
+	return dispatch(labels, 
+		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::multilabel::thin<T>(
 				data,
 				sx, sy, sz,
-				preserve_endpoints
+				preserve_endpoints,
+				max_iterations
 			);
 		}
 	);
@@ -115,7 +126,7 @@ void thin_multilabel(const py::array& labels, const bool preserve_endpoints) {
 
 // assumes fortran order
 auto skeletonize_binary(const py::array& labels, const bool preserve_endpoints) {
-	auto skel = dispatch_skeletonize(labels, 
+	auto skel = dispatch(labels, 
 		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::binary::skeletonize<T>(
@@ -137,7 +148,7 @@ auto skeletonize_binary(const py::array& labels, const bool preserve_endpoints) 
 
 // assumes fortran order
 auto skeletonize_multilabel(const py::array& labels, const bool preserve_endpoints) {
-	auto skeletons = dispatch_skeletonize(labels, 
+	auto skeletons = dispatch(labels, 
 		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::multilabel::skeletonize<T>(
@@ -163,10 +174,38 @@ auto skeletonize_multilabel(const py::array& labels, const bool preserve_endpoin
 	return py_skeletons;
 }
 
+auto extract_skeletons(const py::array& labels) {
+	auto skeletons = dispatch(labels, 
+		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+			using T = std::remove_pointer_t<decltype(data)>;
+			return gaara::postprocess::extract_skeletons<T>(
+				data,
+				sx, sy, sz,
+			);
+		}
+	);
+
+	const uint64_t sx = labels.shape()[0];
+	const uint64_t sy = labels.shape()[1];
+
+	py::dict py_skeletons;
+	for (const auto& [segid, skel] : skeletons) {
+
+		py::array vertices = vertices_to_numpy(skel, sx, sy);
+		py::array edges = edges_to_numpy(skel);
+
+		py_skeletons[py::int_(segid)] = py::make_tuple(vertices, edges);
+	}
+
+	return py_skeletons;
+}
+
+
 PYBIND11_MODULE(fastgaara, m) {
 	m.doc() = "Python interface for Gaara C++ functions."; 
 	m.def("thin_binary", &thin_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image.");
 	m.def("thin_multilabel", &thin_multilabel, "Perform morphological thinning using the Palagyi algorithm on a multilabel 3D image.");
 	m.def("skeletonize_binary", &skeletonize_binary, "Perform morphological thinning using the Palagyi algorithm on a binary 3D image and convert to skeletons.");
 	m.def("skeletonize_multilabel", &skeletonize_multilabel, "Perform morphological thinning using the Palagyi algorithm on a multilabel 3D image and convert to skeletons.");
+	m.def("extract_skeletons", &extract_skeletons, "Given a thinned image, extract the skeletons. This is just the second step broken out.");
 }

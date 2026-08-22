@@ -423,7 +423,7 @@ int64_t thin(
 		iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || iterations < max_iterations));
 
-	return iterations;
+	return number_of_deleted_points;
 }
 
 template <typename LABEL>

@@ -8,8 +8,8 @@
 
 #include <cstdio>
 
-#include "gaara_binary.hpp"
-#include "gaara_multilabel.hpp"
+#include "binary.hpp"
+#include "multilabel.hpp"
 
 TEST(Gaara, TestFindBorderPointsBinary) {
 
