@@ -8,6 +8,11 @@
 #include <stdexcept>
 #include <vector>
 
+#ifdef GAARA_STATICALLY_LINK_LUTS
+	#include "simple_lut.hpp"
+	#include "isthmus_lut.hpp"
+#endif
+
 namespace gaara::def {
 
 constexpr uint64_t MAX_DIM{ std::numeric_limits<uint16_t>::max() };
@@ -23,12 +28,21 @@ struct OneBitArray {
 	uint8_t* m_data;
 	uint64_t m_size;
 	uint64_t m_num_entries;
+	bool m_static_data;
 	const uint64_t k_max_size = (1 << 26) >> 3;
 
 	OneBitArray(const uint64_t size) {
 		m_num_entries = size;
 		m_size = (size + 7) >> 3;
 		m_data = new uint8_t[m_size]();
+		m_static_data = false;
+	}
+
+	OneBitArray(const unsigned char* table, const unsigned int size) {
+		m_data = const_cast<unsigned char*>(table);
+		m_size = size;
+		m_num_entries = size << 3;
+		m_static_data = true;
 	}
 
 	OneBitArray(const char* filename) {
@@ -51,10 +65,14 @@ struct OneBitArray {
 		if (!file.read(reinterpret_cast<char*>(m_data), m_size)) {
 			throw std::runtime_error("Failed to read file data");
 		}
+
+		m_static_data = false;
 	}
 
 	~OneBitArray() {
-		delete[] m_data;
+		if (!m_static_data) {
+			delete[] m_data;
+		}
 	}
 
 	uint64_t size() const {
@@ -79,8 +97,13 @@ struct OneBitArray {
 	}
 };
 
-static OneBitArray simple_lut("lookup_tables/tables/simple.bin");
-static OneBitArray isthmus_lut("lookup_tables/tables/isthmus.bin");
+#ifdef GAARA_STATICALLY_LINK_LUTS 
+	static OneBitArray simple_lut(gaara::lut::simple, gaara::lut::simple_len);
+	static OneBitArray isthmus_lut(gaara::lut::isthmus, gaara::lut::isthmus_len);
+#else
+	static OneBitArray simple_lut("lookup_tables/tables/simple.bin");
+	static OneBitArray isthmus_lut("lookup_tables/tables/isthmus.bin");
+#endif
 
 struct Voxel {
 	uint16_t x;

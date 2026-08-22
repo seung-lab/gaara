@@ -6,6 +6,8 @@ all: simple isthmus
 	@echo "Running programs..."
 	./bin/simple
 	./bin/isthmus
+	xxd -i ./tables/simple.bin > ./tables/simple.hpp
+	xxd -i ./tables/isthmus.bin > ./tables/isthmus.hpp
 
 simple: src/simple.cpp
 	$(CXX) $(CXXFLAGS) src/simple.cpp -o bin/simple
