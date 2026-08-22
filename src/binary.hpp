@@ -398,7 +398,7 @@ uint64_t kernel(
 
 		if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {
 			labels[loc-1] = PointStatus::BORDER;
-			if (interior) {
+			if (interior && pt.x > 1) {
 				interior_border_points.emplace_back(pt.x - 1, pt.y, pt.z);
 			}
 			else {
@@ -407,7 +407,7 @@ uint64_t kernel(
 		}
 		if (pt.y > 0 && labels[loc-sx] == PointStatus::FOREGROUND) {
 			labels[loc-sx] = PointStatus::BORDER;
-			if (interior) {
+			if (interior && pt.y > 1) {
 				interior_border_points.emplace_back(pt.x, pt.y - 1, pt.z);
 			}
 			else {
@@ -416,7 +416,7 @@ uint64_t kernel(
 		}
 		if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
 			labels[loc-sxy] = PointStatus::BORDER;
-			if (interior) {
+			if (interior && pt.z > 1) {
 				interior_border_points.emplace_back(pt.x, pt.y, pt.z - 1);
 			}
 			else {
@@ -425,7 +425,7 @@ uint64_t kernel(
 		}
 		if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
 			labels[loc+1] = PointStatus::BORDER;
-			if (interior) {
+			if (interior && pt.x < sx - 2) {
 				interior_border_points.emplace_back(pt.x + 1, pt.y, pt.z);
 			}
 			else {
@@ -434,7 +434,7 @@ uint64_t kernel(
 		}
 		if (pt.y < sy - 1 && labels[loc+sx] == PointStatus::FOREGROUND) {
 			labels[loc+sx] = PointStatus::BORDER;
-			if (interior) {
+			if (interior && pt.y < sy - 2) {
 				interior_border_points.emplace_back(pt.x, pt.y + 1, pt.z);
 			}
 			else {
@@ -443,7 +443,7 @@ uint64_t kernel(
 		}
 		if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
 			labels[loc+sxy] = PointStatus::BORDER;
-			if (interior) {
+			if (interior && pt.z < sz - 2) {
 				interior_border_points.emplace_back(pt.x, pt.y, pt.z + 1);
 			}
 			else {
