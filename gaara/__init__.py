@@ -125,7 +125,6 @@ def skeletonize(
 def thin_crackle(
     labels:Union["CrackleArray", bytes],
     binary_image:bool = False,
-    in_place:bool = False,
     preserve_endpoints:bool = False,
     memory:int = -1,
     threads:int = 0,
@@ -311,5 +310,128 @@ def thin_crackle(
             break
 
     return iterated_labels
+
+
+def skeletonize_crackle(
+    labels:Union["CrackleArray", bytes],
+    binary_image:bool = False,
+    preserve_endpoints:bool = False,
+    memory:int = -1,
+    threads:int = 0,
+    padding:int = 1,
+    verbose:int = 0,
+) -> "CrackleArray":
+    import crackle
+    from crackle import CrackleArray
+    import time
+    import psutil
+    import multiprocessing as mp
+
+    assert threads >= 0
+
+    if isinstance(labels, bytes):
+        labels = CrackleArray(labels)
+    elif not isinstance(labels, CrackleArray):
+        raise ValueError("This function only accepts type CrackleArrays.")
+
+    if labels.ndim != 3:
+        raise ValueError(f"This function only supports 3D images. Got: {labels.shape}")
+
+    if threads == 0:
+        threads = mp.cpu_count()
+
+    labels = labels.asfortranarray()
+
+    thinned_labels = thin_crackle(
+        labels,
+        binary_image=binary_image,
+        preserve_endpoints=preserve_endpoints,
+        memory=memory,
+        threads=threads,
+        padding=padding,
+        verbose=verbose,
+    )
+
+    slice_memory = header.data_width * header.sx * header.sy 
+    # Estimate of crackle per-slice decoding memory usage
+    decoding_memory = (header.data_width + 4) * slice_memory * threads # ccl + slice 
+
+    system_memory = psutil.virtual_memory().available
+    if memory < 0:
+        memory = system_memory
+
+    internal_factor = 1.1 # for extraction data structures
+
+    estimated_memory_requirement = header.data_width * header.voxels()
+    estimated_memory_requirement *= internal_factor # for algorithm interal data structures
+    estimated_memory_requirement += decoding_memory
+    estimated_memory_requirement += len(labels) + len(thinned_labels)
+
+    if estimated_memory_requirement < memory and estimated_memory_requirement < system_memory:
+        if verbose:
+            print("Processing all at once.")
+            print(f"Estimated Memory Requirement: {estimated_memory_requirement} bytes")
+        
+        return fastgaara.extract_skeletons(labels.numpy())
+
+    estimated_memory_requirement = decoding_memory + len(labels) + len(thinned_labels)
+
+    cz = ((memory - estimated_memory_requirement) / internal_factor / slice_memory)
+    cz = max(cz, 1)
+    cz = min(cz, header.sz)
+    cz = int(cz)
+
+    estimated_memory_requirement += internal_factor * min(cz, header.sz) * slice_memory
+
+    if estimated_memory_requirement > min(memory, system_memory):
+        raise MemoryError(
+            f"Not enough memory to process this volume, try increasing the limit, reducing the number of threads, or reducing padding.\n"
+            f"User Limit: {memory} bytes\n"
+            f"Available: {system_memory} bytes\n"
+            f"Estimated memory requirement: {estimated_memory_requirement / 1e9:.1f} GB."
+        )
+
+    skeletons = {}
+
+    num_chunks = int(np.ceil(header.sz / cz))
+    for i in range(num_chunks):
+        z_start = i * cz
+        z_end = min((i+1) * cz, header.sz)
+        arr = thinned_labels[:,:, z_start:z_end ]
+        arr_skeletons = fastgaara.extract_skeletons(arr)
+        del arr
+
+        for segid in arr_skeletons.keys():
+            if segid not in skeletons:
+                skeletons[segid] = arr_skeletons[segid]
+                continue
+
+            skeletons[segid] = osteoid.Skeleton.simple_merge([ 
+                skeletons[segid], arr_skeletons[segid] 
+            ])
+
+    for segid in skeletons:
+        skel = skeletons[segid]
+        skeletons[segid] = skel.consolidate()
+
+    return skeletons
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
