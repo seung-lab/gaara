@@ -419,14 +419,16 @@ uint64_t thin(
 	uint64_t number_of_deleted_points = 0;
 	int64_t num_iterations = 0;
 
+	// U,N,E,S,W,D
+
 	do {
 		number_of_deleted_points = 0;
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);		
 		num_iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || num_iterations < max_iterations));
 

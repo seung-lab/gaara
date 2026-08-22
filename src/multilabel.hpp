@@ -413,14 +413,16 @@ int64_t thin(
 	uint64_t number_of_deleted_points = 0;
 	int64_t iterations = 0;
 	
+	// U,N,E,S,W,D
+
 	do {
 		number_of_deleted_points = 0;
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_X);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_X);
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y);
 		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_X);
 		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_X);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y);
 		iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || iterations < max_iterations));
 
