@@ -49,7 +49,7 @@ uint32_t foreground_configuration(
 	const uint64_t sxy = sx * sy;
 	const uint64_t loc = x + sx * (y + sy * z);
 
-    if constexpr (Interior) {
+	if constexpr (Interior) {
 		// z = -1
 		index |= (labels[loc-1-sx-sxy] > 0);
 		index |= (labels[loc-sx-sxy] > 0) << 1;
@@ -87,8 +87,8 @@ uint32_t foreground_configuration(
 		index |= (labels[loc-1+sx+sxy] > 0) << 23;
 		index |= (labels[loc+sx+sxy] > 0) << 24;
 		index |= (labels[loc+1+sx+sxy] > 0) << 25;
-    }
-    else {
+	}
+	else {
 		const bool ltx = x < sx-1;
 		const bool lty = y < sy-1;
 		const bool ltz = z < sz-1;
