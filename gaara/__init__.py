@@ -192,7 +192,8 @@ def thin_crackle(
     estimated_memory_requirement += len(labels) * 3
     estimated_memory_requirement = int(estimated_memory_requirement)
 
-    system_memory = psutil.virtual_memory().available
+    system_memory = psutil.virtual_memory().total
+
     if memory < 0:
         memory = system_memory
 
@@ -205,6 +206,7 @@ def thin_crackle(
             binary_image=binary_image,
             preserve_endpoints=preserve_endpoints,
             in_place=True,
+            threads=threads,
         )
         return crackle.compressa(labels, parallel=threads)
 
@@ -357,7 +359,7 @@ def extract_skeletons_crackle(
     # Estimate of crackle per-slice decoding memory usage
     decoding_memory = (header.data_width + 4) * slice_memory * threads # ccl + slice 
 
-    system_memory = psutil.virtual_memory().available
+    system_memory = psutil.virtual_memory().total
     if memory < 0:
         memory = system_memory
 
