@@ -409,7 +409,7 @@ uint64_t kernel(
 
 	jobs.clear();
 	for (std::size_t t = 0; t < threads; t++) {
-		jobs.emplace_back([&,t](std::size_t ignore) { phase1(t); });
+		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
 	}
 	pool.run_batch(jobs);
 
@@ -449,11 +449,6 @@ uint64_t thin(
 
 	std::vector<std::list<Voxel>> border_points = find_border_points(labels, sx, sy, sz);
 	std::vector<std::deque<Iterator>> potentially_deletable(threads);
-
-	printf("%d\n", border_points.size());
-	for (int t = 0; t < threads; t++) {
-		printf("%d\n", border_points[t].size());
-	}
 
 	uint64_t number_of_deleted_points = 0;
 	int64_t num_iterations = 0;
