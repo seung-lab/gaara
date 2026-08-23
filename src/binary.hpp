@@ -7,6 +7,7 @@
 #include <list>
 #include <functional>
 #include <stdexcept>
+#include <thread>
 
 #include "builtins.hpp"
 #include "def.hpp"
@@ -255,6 +256,7 @@ auto find_border_points(
 				}
 			}
 		}
+
 		return border_points;
 	};
 
@@ -269,8 +271,8 @@ uint64_t kernel(
 	std::vector<std::list<Voxel>>& border_points,
 	std::vector<std::deque<Iterator>>& potentially_deletable,
 	const bool preserve_endpoints,
-	const int threads,
-	ThreadPool& pool
+	const unsigned int threads,
+	GaaraThreadPool& pool
 ) {
 	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
 
@@ -428,7 +430,7 @@ uint64_t thin(
 	const bool preserve_endpoints = false,
 	const std::vector<Voxel> anchors = {}, 
 	const int64_t max_iterations = -1,
-	const int threads = 1
+	unsigned int threads = 1
 ) {
 	if (labels == nullptr) {
 		throw std::invalid_argument("Null pointer provided for data.");
@@ -440,6 +442,11 @@ uint64_t thin(
 		return 0;
 	}
 
+	if (threads <= 0) {
+		threads = std::thread::hardware_concurrency();
+	}
+	threads = std::min(threads, std::thread::hardware_concurrency());
+
 	// enforce binary image starting point
 	const uint64_t voxels = sx * sy * sz;
 
@@ -447,7 +454,9 @@ uint64_t thin(
 		labels[i] = labels[i] > 0; // PointStatus::BACKGROUND or FOREGROUND
 	}
 
-	std::vector<std::list<Voxel>> border_points = find_border_points(labels, sx, sy, sz);
+	std::vector<std::list<Voxel>> border_points = find_border_points(
+		labels, sx, sy, sz, /*erode_border=*/true, threads
+	);
 	std::vector<std::deque<Iterator>> potentially_deletable(threads);
 
 	uint64_t number_of_deleted_points = 0;
@@ -466,7 +475,7 @@ uint64_t thin(
 
 	// U,N,E,S,W,D
 
-	ThreadPool pool(threads);
+	GaaraThreadPool pool(threads);
 
 	do {
 		number_of_deleted_points = 0;

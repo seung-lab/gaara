@@ -17,6 +17,7 @@ def thin(
     anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
     max_iterations:int = -1,
     return_num_deleted_points:bool = False,
+    threads:int = 1,
 ) -> npt.NDArray[np.integer]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image.
@@ -75,6 +76,7 @@ def thin(
             preserve_endpoints,
             anchors,
             max_iterations,
+            threads
         )
     else:
         num_deleted_points = fastgaara.thin_multilabel(

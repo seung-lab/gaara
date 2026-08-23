@@ -104,7 +104,8 @@ auto thin_binary(
 	const py::array& labels, 
 	const bool preserve_endpoints, 
 	const py::array_t<uint16_t>& anchors,
-	const int64_t max_iterations = -1
+	const int64_t max_iterations = -1,
+	unsigned int threads
 ) {
 	auto cpp_anchors = convert_anchors(anchors);
 
@@ -116,7 +117,8 @@ auto thin_binary(
 				sx, sy, sz,
 				preserve_endpoints,
 				cpp_anchors,
-				max_iterations
+				max_iterations,
+				threads
 			);
 		}
 	);

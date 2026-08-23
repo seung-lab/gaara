@@ -34,8 +34,8 @@ May 2019, December 2023, January 2025, August 2026
 - Added run_batch for warm threads. Claude helped.
 */
 
-#ifndef THREAD_POOL_H
-#define THREAD_POOL_H
+#ifndef GAARA_THREAD_POOL_HPP
+#define GAARA_THREAD_POOL_HPP
 
 #include <vector>
 #include <queue>
@@ -48,9 +48,9 @@ May 2019, December 2023, January 2025, August 2026
 #include <functional>
 #include <stdexcept>
 
-class ThreadPool {
+class GaaraThreadPool {
 public:
-    ThreadPool(size_t);
+    GaaraThreadPool(size_t);
     void enqueue(std::function<void(size_t)>); 
     void start(size_t);
     void join();
@@ -58,7 +58,7 @@ public:
     template <typename Iterable>
     void run_batch(Iterable&& batch);
 
-    ~ThreadPool();
+    ~GaaraThreadPool();
 private:
     // need to keep track of threads so we can join them
     std::vector< std::thread > workers;
@@ -72,13 +72,13 @@ private:
 };
  
 // the constructor just launches some amount of workers
-inline ThreadPool::ThreadPool(size_t threads)
+inline GaaraThreadPool::GaaraThreadPool(size_t threads)
     :   stop(false)
 {
     start(threads);
 }
 
-void ThreadPool::start(size_t threads) {
+void GaaraThreadPool::start(size_t threads) {
     stop = false;
     for(size_t i = 0;i<threads;++i)
         workers.emplace_back(
@@ -106,7 +106,7 @@ void ThreadPool::start(size_t threads) {
 
 // use this for warm pools
 template <typename Iterable>
-void ThreadPool::run_batch(Iterable&& batch) {
+void GaaraThreadPool::run_batch(Iterable&& batch) {
     std::latch done(std::distance(std::begin(batch), std::end(batch)));
 
     for (auto& fn : batch) {
@@ -126,7 +126,7 @@ void ThreadPool::run_batch(Iterable&& batch) {
 }
 
 // add new work item to the pool
-void ThreadPool::enqueue(std::function<void(size_t)> f) {
+void GaaraThreadPool::enqueue(std::function<void(size_t)> f) {
     auto task = std::make_shared< std::packaged_task<void(size_t)> >(f);
     
     {
@@ -134,14 +134,14 @@ void ThreadPool::enqueue(std::function<void(size_t)> f) {
 
         // don't allow enqueueing after stopping the pool
         if(stop)
-            throw std::runtime_error("enqueue on stopped ThreadPool");
+            throw std::runtime_error("enqueue on stopped GaaraThreadPool");
 
         tasks.emplace([task](size_t t){ (*task)(t); });
     }
     condition.notify_one();
 }
 
-inline void ThreadPool::join () {
+inline void GaaraThreadPool::join () {
     {
         std::unique_lock<std::mutex> lock(queue_mutex);
         stop = true;
@@ -154,7 +154,7 @@ inline void ThreadPool::join () {
 }
 
 // the destructor joins all threads
-inline ThreadPool::~ThreadPool() {
+inline GaaraThreadPool::~GaaraThreadPool() {
     join();
 }
 
