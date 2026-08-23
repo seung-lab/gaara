@@ -11,6 +11,7 @@
 #include "builtins.hpp"
 #include "def.hpp"
 #include "postprocess.hpp"
+#include "threadpool.hpp"
 
 using namespace gaara::def;
 
@@ -139,7 +140,8 @@ template <typename LABEL>
 auto find_border_points(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool erode_border = true
+	const bool erode_border = true,
+	const int threads = 1
 ) {
 
 	// assume a 3x3x3 stencil with all voxels on
@@ -191,7 +193,9 @@ auto find_border_points(
 
 		int stale_stencil = 3;
 
-		std::list<Voxel> border_points;
+		std::vector<std::list<Voxel>> border_points(threads);
+
+		int t = 0;
 
 		for (uint64_t z = zs; z < ze; z++) {
 			for (uint64_t y = ys; y < ye; y++) {
@@ -243,7 +247,8 @@ auto find_border_points(
 					
 					if (!pure_right || !pure_middle || !pure_left) {
 						labels[loc] = PointStatus::BORDER;
-						border_points.emplace_back(x,y,z);
+						border_points[t].emplace_back(x,y,z);
+						t = (t == threads - 1) ? 0 : t + 1;
 					}
 
 					stale_stencil = 1;
@@ -261,9 +266,11 @@ uint64_t kernel(
 	ThinningDirection direction,
 	LABEL* labels, 
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	std::list<Voxel>& border_points,
-	std::deque<Iterator>& potentially_deletable,
-	const bool preserve_endpoints
+	std::vector<std::list<Voxel>>& border_points,
+	std::vector<std::deque<Iterator>>& potentially_deletable,
+	const bool preserve_endpoints,
+	const int threads,
+	ThreadPool& pool
 ) {
 	using BorderCheckFn = std::function<bool(const Voxel&, uint64_t)>;
 
@@ -290,103 +297,128 @@ uint64_t kernel(
 		}
 	};
 
-	uint64_t number_of_deleted_points = 0;
-	potentially_deletable.clear();
+	for (size_t t = 0; t < threads; t++) {
+		potentially_deletable[t].clear();
+	}
 
 	BorderCheckFn border_check_fn = direction_map[direction];
 
-	for (auto it = border_points.begin(); it != border_points.end();) {
-		const Voxel pt = *it;
-		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
+	auto phase1 = [&](std::size_t t) {
+		for (auto it = border_points[t].begin(); it != border_points[t].end();) {
+			const Voxel pt = *it;
+			const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
 
-		// Should this ever happen?
-		if (labels[loc] != PointStatus::BORDER) {
-			it = border_points.erase(it);
-			continue;
+			// Should this ever happen?
+			if (labels[loc] != PointStatus::BORDER) {
+				it = border_points[t].erase(it);
+				continue;
+			}
+
+			const bool interior = (
+				pt.x > 0 && pt.x < sx - 1 
+			 && pt.y > 0 && pt.y < sy - 1
+			 && pt.z > 0 && pt.z < sz - 1
+			);
+
+			const uint32_t config = interior
+				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
+				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+
+			// Palagyi's algorithm puts isthmus after simple, but they are 
+			// disjoint sets, so only one or zero should ever fire. I put
+			// isthmus first since it has a simpler condition and we can then
+			// put the simple decision behind an if else statement to avoid
+			// some calculation.
+			if (preserve_endpoints && popcount(config) == 1) {
+				labels[loc] = PointStatus::PRESERVE;
+				it = border_points[t].erase(it);
+				continue;				
+			}
+			else if (isthmus_lut[config]) {
+				labels[loc] = PointStatus::PRESERVE;
+				it = border_points[t].erase(it);
+				continue;
+			}
+			else if (border_check_fn(pt, loc) && simple_lut[config]) {
+				potentially_deletable[t].emplace_back(it);
+			}
+
+			it++;
 		}
+	};
 
-		const bool interior = (
-			pt.x > 0 && pt.x < sx - 1 
-		 && pt.y > 0 && pt.y < sy - 1
-		 && pt.z > 0 && pt.z < sz - 1
-		);
-
-		const uint32_t config = interior
-			? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-			: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
-
-		// Palagyi's algorithm puts isthmus after simple, but they are 
-		// disjoint sets, so only one or zero should ever fire. I put
-		// isthmus first since it has a simpler condition and we can then
-		// put the simple decision behind an if else statement to avoid
-		// some calculation.
-		if (preserve_endpoints && popcount(config) == 1) {
-			labels[loc] = PointStatus::PRESERVE;
-			it = border_points.erase(it);
-			continue;				
-		}
-		else if (isthmus_lut[config]) {
-			labels[loc] = PointStatus::PRESERVE;
-			it = border_points.erase(it);
-			continue;
-		}
-		else if (border_check_fn(pt, loc) && simple_lut[config]) {
-			potentially_deletable.emplace_back(it);
-		}
-
-		it++;
+	std::vector<std::function<void(std::size_t)>> jobs;
+	jobs.reserve(threads);
+	for (std::size_t t = 0; t < threads; t++) {
+		jobs.emplace_back([&,t](std::size_t ignore) { phase1(t); });
 	}
+	pool.run_batch(jobs);
+
+	std::vector<uint64_t> number_of_deleted_points(threads);
 
 	// Phase 2
-	for (Iterator& it : potentially_deletable) {
-		const Voxel pt = *it;
-		
-		const bool interior = (
-			pt.x > 0 && pt.x < sx - 1 
-		 && pt.y > 0 && pt.y < sy - 1
-		 && pt.z > 0 && pt.z < sz - 1
-		);
+	auto phase2 = [&](std::size_t t) {
+		for (Iterator& it : potentially_deletable[t]) {
+			const Voxel pt = *it;
+			
+			const bool interior = (
+				pt.x > 0 && pt.x < sx - 1 
+			 && pt.y > 0 && pt.y < sy - 1
+			 && pt.z > 0 && pt.z < sz - 1
+			);
 
-		const uint32_t config = interior
-			? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-			: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+			const uint32_t config = interior
+				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
+				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
 
-		if (!simple_lut[config]) {
-			continue;
-		}
+			if (!simple_lut[config]) {
+				continue;
+			}
 
-		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
-		labels[loc] = PointStatus::BACKGROUND;
-		border_points.erase(it);
-		number_of_deleted_points++;
+			const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
+			labels[loc] = PointStatus::BACKGROUND;
+			border_points[t].erase(it);
+			number_of_deleted_points[t]++;
 
-		if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {
-			labels[loc-1] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x - 1, pt.y, pt.z);
+			if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {
+				labels[loc-1] = PointStatus::BORDER;
+				border_points[t].emplace_back(pt.x - 1, pt.y, pt.z);
+			}
+			if (pt.y > 0 && labels[loc-sx] == PointStatus::FOREGROUND) {
+				labels[loc-sx] = PointStatus::BORDER;
+				border_points[t].emplace_back(pt.x, pt.y - 1, pt.z);
+			}
+			if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
+				labels[loc-sxy] = PointStatus::BORDER;
+				border_points[t].emplace_back(pt.x, pt.y, pt.z - 1);
+			}
+			if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
+				labels[loc+1] = PointStatus::BORDER;
+				border_points[t].emplace_back(pt.x + 1, pt.y, pt.z);
+			}
+			if (pt.y < sy - 1 && labels[loc+sx] == PointStatus::FOREGROUND) {
+				labels[loc+sx] = PointStatus::BORDER;
+				border_points[t].emplace_back(pt.x, pt.y + 1, pt.z);
+			}
+			if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
+				labels[loc+sxy] = PointStatus::BORDER;
+				border_points[t].emplace_back(pt.x, pt.y, pt.z + 1);
+			}
 		}
-		if (pt.y > 0 && labels[loc-sx] == PointStatus::FOREGROUND) {
-			labels[loc-sx] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x, pt.y - 1, pt.z);
-		}
-		if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
-			labels[loc-sxy] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x, pt.y, pt.z - 1);
-		}
-		if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
-			labels[loc+1] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x + 1, pt.y, pt.z);
-		}
-		if (pt.y < sy - 1 && labels[loc+sx] == PointStatus::FOREGROUND) {
-			labels[loc+sx] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x, pt.y + 1, pt.z);
-		}
-		if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
-			labels[loc+sxy] = PointStatus::BORDER;
-			border_points.emplace_back(pt.x, pt.y, pt.z + 1);
-		}
+	};
+
+	jobs.clear();
+	for (std::size_t t = 0; t < threads; t++) {
+		jobs.emplace_back([&,t](std::size_t ignore) { phase1(t); });
+	}
+	pool.run_batch(jobs);
+
+	uint64_t number_of_deleted_points_total = 0;
+	for (int t = 0; t < threads; t++) {
+		number_of_deleted_points_total += number_of_deleted_points[t];
 	}
 
-	return number_of_deleted_points;
+	return number_of_deleted_points_total;
 }
 
 template <typename LABEL>
@@ -395,7 +427,8 @@ uint64_t thin(
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool preserve_endpoints = false,
 	const std::vector<Voxel> anchors = {}, 
-	const int64_t max_iterations = -1
+	const int64_t max_iterations = -1,
+	const int threads = 1
 ) {
 	if (labels == nullptr) {
 		throw std::invalid_argument("Null pointer provided for data.");
@@ -414,8 +447,13 @@ uint64_t thin(
 		labels[i] = labels[i] > 0; // PointStatus::BACKGROUND or FOREGROUND
 	}
 
-	std::list<Voxel> border_points = find_border_points(labels, sx, sy, sz);
-	std::deque<Iterator> potentially_deletable;
+	std::vector<std::list<Voxel>> border_points = find_border_points(labels, sx, sy, sz);
+	std::vector<std::deque<Iterator>> potentially_deletable(threads);
+
+	printf("%d\n", border_points.size());
+	for (int t = 0; t < threads; t++) {
+		printf("%d\n", border_points[t].size());
+	}
 
 	uint64_t number_of_deleted_points = 0;
 	int64_t num_iterations = 0;
@@ -433,16 +471,20 @@ uint64_t thin(
 
 	// U,N,E,S,W,D
 
+	ThreadPool pool(threads);
+
 	do {
 		number_of_deleted_points = 0;
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints);		
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);		
 		num_iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || num_iterations < max_iterations));
+
+	pool.join();
 
 	for (uint64_t i = 0; i < voxels; i++) {
 		labels[i] = labels[i] > 0;
