@@ -17,14 +17,10 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
         arch: [auto]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             arch: aarch64
     steps:
       - uses: actions/checkout@v2
-
-      - name: Set up QEMU
-        if:  ${{ matrix.arch == 'aarch64' }}
-        uses: docker/setup-qemu-action@v2
 
       - name: Build wheels
         uses: joerick/cibuildwheel@v4.2.0
