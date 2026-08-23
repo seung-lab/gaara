@@ -15,7 +15,7 @@ expt:
 	$(CXX) -g -O3 -std=c++20 -Isrc $(CRACKLE_INCLUDES) test.cpp -o test
 
 gaara_test.cpp:
-	$(CXX) -Og -g src/gaara_test.cpp $(shell pkg-config --cflags --libs gtest gtest_main) -std=c++17 -o automated_tests
+	$(CXX) -Og -g src/gaara_test.cpp $(shell pkg-config --cflags --libs gtest gtest_main) -std=c++20 -o automated_tests
 
 python:
 	rm -rf build
