@@ -36,16 +36,24 @@ TEST(Gaara, TestFindBorderPointsBinary) {
 	// 	printf("%d %d %d\n", vx.x, vx.y, vx.z);
 	// }
 
-	EXPECT_EQ(border_points.size(), (sx-2) * (sy-2) * (sz-2) - (sx-4) * (sy-4) * (sz-4));
+	auto num_pts = [](auto bp){ 
+		uint64_t num = 0;
+		for (int i = 0; i < bp.size(); i++) {
+			num += bp[i].size();
+		}
+		return num;
+	};
+
+	EXPECT_EQ(num_pts(border_points), (sx-2) * (sy-2) * (sz-2) - (sx-4) * (sy-4) * (sz-4));
 	
 	std::fill(image.begin(), image.end(), 1);
 	border_points = gaara::binary::find_border_points(image.data(), sx, sy, sz);
 
-	EXPECT_EQ(border_points.size(), sx * sy * sz - (sx-2) * (sy-2) * (sz-2));
+	EXPECT_EQ(num_pts(border_points), sx * sy * sz - (sx-2) * (sy-2) * (sz-2));
 
 	border_points = gaara::binary::find_border_points(image.data(), sx, sy, sz, false);
 
-	EXPECT_EQ(border_points.size(), 0);
+	EXPECT_EQ(num_pts(border_points), 0);
 }
 
 TEST(Gaara, TestFindBorderPointsMultilabel) {
