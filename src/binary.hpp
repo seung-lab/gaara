@@ -394,6 +394,7 @@ uint64_t thin(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool preserve_endpoints = false,
+	const std::vector<Voxel> anchors = {}, 
 	const int64_t max_iterations = -1
 ) {
 	if (labels == nullptr) {
@@ -418,6 +419,17 @@ uint64_t thin(
 
 	uint64_t number_of_deleted_points = 0;
 	int64_t num_iterations = 0;
+
+	for (auto& pt : anchors) {
+		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
+		if (loc >= voxels) {
+			throw std::invalid_argument("anchors must be located inside the image.");
+		}
+
+		if (labels[loc] != PointStatus::BACKGROUND) {
+			labels[loc] = PointStatus::PRESERVE;
+		}
+	}
 
 	// U,N,E,S,W,D
 
@@ -444,9 +456,10 @@ template <typename LABEL>
 auto skeletonize(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool preserve_endpoints = false
+	const bool preserve_endpoints = false,
+	const std::vector<Voxel> anchors = {}
 ) {
-	thin(labels, sx, sy, sz, preserve_endpoints);
+	thin(labels, sx, sy, sz, preserve_endpoints, anchors);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
 }
 

@@ -86,19 +86,36 @@ py::array edges_to_numpy(const gaara::def::Skeleton& skel) {
 	return edges;
 }
 
+std::vector<gaara::def::Voxel> convert_anchors(const py::array_t<uint16_t>& anchors) {
+	const uint64_t Npc = anchors.shape()[0];
+
+	auto pc = anchors.unchecked<2>();
+	std::vector<gaara::def::Voxel> coords;
+	coords.reserve(Npc);
+	for (uint64_t i = 0; i < Npc; i++) {
+		coords.emplace_back(pc(i,0), pc(i,1), pc(i,2));
+	}
+
+	return coords;
+}
+
 // assumes fortran order
 auto thin_binary(
 	const py::array& labels, 
 	const bool preserve_endpoints, 
+	const py::array_t<uint16_t>& anchors,
 	const int64_t max_iterations = -1
 ) {
+	auto cpp_anchors = convert_anchors(anchors);
+
 	return dispatch(labels, 
-		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+		[&](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::binary::thin<T>(
 				data,
 				sx, sy, sz,
 				preserve_endpoints,
+				cpp_anchors,
 				max_iterations
 			);
 		}
@@ -109,15 +126,20 @@ auto thin_binary(
 auto thin_multilabel(
 	const py::array& labels,
 	const bool preserve_endpoints,
-	const int64_t max_iterations
+	const py::array_t<uint16_t>& anchors,
+	const int64_t max_iterations = -1
 ) {
+
+	auto cpp_anchors = convert_anchors(anchors);
+
 	return dispatch(labels, 
-		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+		[&](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::multilabel::thin<T>(
 				data,
 				sx, sy, sz,
 				preserve_endpoints,
+				cpp_anchors,
 				max_iterations
 			);
 		}
@@ -125,14 +147,22 @@ auto thin_multilabel(
 }
 
 // assumes fortran order
-auto skeletonize_binary(const py::array& labels, const bool preserve_endpoints) {
+auto skeletonize_binary(
+	const py::array& labels, 
+	const bool preserve_endpoints,
+	const py::array_t<uint16_t>& anchors
+) {
+
+	auto cpp_anchors = convert_anchors(anchors);
+
 	auto skel = dispatch(labels, 
-		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+		[&](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::binary::skeletonize<T>(
 				data,
 				sx, sy, sz,
-				preserve_endpoints
+				preserve_endpoints,
+				cpp_anchors
 			);
 		}
 	);
@@ -147,14 +177,22 @@ auto skeletonize_binary(const py::array& labels, const bool preserve_endpoints) 
 }
 
 // assumes fortran order
-auto skeletonize_multilabel(const py::array& labels, const bool preserve_endpoints) {
+auto skeletonize_multilabel(
+	const py::array& labels, 
+	const bool preserve_endpoints,
+	const py::array_t<uint16_t>& anchors
+) {
+
+	auto cpp_anchors = convert_anchors(anchors);
+
 	auto skeletons = dispatch(labels, 
-		[preserve_endpoints](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
+		[&](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::multilabel::skeletonize<T>(
 				data,
 				sx, sy, sz,
-				preserve_endpoints
+				preserve_endpoints,
+				cpp_anchors
 			);
 		}
 	);
