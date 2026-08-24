@@ -90,12 +90,12 @@ py::array edges_to_numpy(const gaara::def::Skeleton& skel) {
 auto thin_binary(
 	const py::array& labels, 
 	const bool preserve_endpoints, 
-	const py::array_t<uint16_t>& preserve_coords,
+	const py::array_t<uint16_t>& anchors,
 	const int64_t max_iterations = -1
 ) {
-	const uint64_t Npc = preserve_coords.shape()[0];
+	const uint64_t Npc = anchors.shape()[0];
 
-	auto pc = preserve_coords.unchecked<2>();
+	auto pc = anchors.unchecked<2>();
 	std::vector<gaara::def::Voxel> coords;
 	coords.reserve(Npc);
 	for (uint64_t i = 0; i < Npc; i++) {

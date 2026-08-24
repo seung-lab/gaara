@@ -14,7 +14,7 @@ def thin(
     binary_image:bool = False,
     in_place:bool = False,
     preserve_endpoints:bool = False,
-    preserve_coords:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
+    anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
     max_iterations:int = -1,
     return_num_deleted_points:bool = False,
 ) -> npt.NDArray[np.integer]:
@@ -65,15 +65,15 @@ def thin(
         binary_image = True
         labels = labels.view(np.uint8)
 
-    preserve_coords = np.asarray(preserve_coords).astype(np.uint16, copy=False)
-    if preserve_coords is not None and preserve_coords.ndim != 2 and preserve_coords.shape[1] != 3:
+    anchors = np.asarray(anchors).astype(np.uint16, copy=False)
+    if anchors is not None and anchors.ndim != 2 and anchors.shape[1] != 3:
         raise ValueError(f"Preserve must be an Nx3 array of voxel coordinates.")
 
     if binary_image:
         num_deleted_points = fastgaara.thin_binary(
             labels, 
             preserve_endpoints,
-            preserve_coords,
+            anchors,
             max_iterations,
         )
     else:
@@ -93,7 +93,7 @@ def skeletonize(
     binary_image:bool = False,
     in_place:bool = False,
     preserve_endpoints:bool = False,
-    preserve_coords:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
+    anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
 ) -> tuple[osteoid.Skeleton|dict[int,osteoid.Skeleton], npt.NDArray[np.integer]]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image
@@ -136,7 +136,7 @@ def skeletonize(
 
     if binary_image:
         (vertices, edges) = fastgaara.skeletonize_binary(
-            labels, preserve_endpoints, preserve_coords
+            labels, preserve_endpoints, anchors
         )
         skeletons = osteoid.Skeleton(vertices, edges)
     else:
