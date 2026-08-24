@@ -259,6 +259,7 @@ int64_t thin(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool preserve_endpoints = false,
+	const std::vector<Voxel> anchors = {},
 	const int64_t max_iterations = -1
 ) {
 	if (labels == nullptr) {
@@ -279,6 +280,13 @@ int64_t thin(
 
 	for (uint64_t i = 0; i < voxels; i++) {
 		label_status.set(i, labels[i] > 0);
+	}
+
+	for (auto& pt : anchors) {
+		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
+		if (label_status[loc] != PointStatus::BACKGROUND) {
+			label_status.set(loc, PointStatus::PRESERVE);
+		}
 	}
 
 	using Iterator = std::list<Voxel>::iterator;
@@ -433,9 +441,10 @@ template <typename LABEL>
 auto skeletonize(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool preserve_endpoints = false
+	const bool preserve_endpoints = false,
+	const std::vector<Voxel> anchors = {}
 ) {
-	thin(labels, sx, sy, sz, preserve_endpoints);
+	thin(labels, sx, sy, sz, preserve_endpoints, anchors);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz);
 }
 
