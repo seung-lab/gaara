@@ -4,7 +4,7 @@ Skeleton thinning algorithm for large images.
 ```python
 import gaara
 import numpy as np
-import fill_voids
+import fastmorph
 
 arr = np.load(...) # some 3d array in fortran order
 
@@ -13,10 +13,11 @@ arr = np.load(...) # some 3d array in fortran order
 # containing hulls that can't be thinned, and the 
 # performance will suffer. So make sure you have no
 # cavities! Your dentist will thank you.
-arr = fill_voids.fill(arr, in_place=True)
+# fastmorph.fill_holes_v2 is efficient on multiple labels.
+filled, holes = fastmorph.fill_holes_v2(arr)
 
 # binary images are more efficient to process
-# 80% of the memory and faster.
+# less memory and faster.
 
 # in_place: modify the input array in_place (saves memory)
 # binary_image: consider the input image a binary image (foreground/bg only)
@@ -24,11 +25,13 @@ arr = fill_voids.fill(arr, in_place=True)
 # preserve_endpoints: mark endpoints 3x3x3 stencils containing exactly 2 foreground voxels
 #   for preservation. By default, the palagyi algorithm is more aggressive.
 
-skeletons, thin_arr = gaara.skeletonize(arr, binary_image=True, in_place=False, preserve_endpoints=False)
-skeletons, thin_arr = gaara.skeletonize(arr, binary_image=False, in_place=False, preserve_endpoints=False)
+skeletons, thin_arr = gaara.skeletonize(filled, binary_image=True, in_place=False, preserve_endpoints=False)
+
+# You can specify points of interest ("anchors") to be preserved in voxel space
+skeletons, thin_arr = gaara.skeletonize(filled, anchors=[(10,10,10)])
 
 # Perform the thinning action on the image without extracting skeletons
-thin_arr = gaara.thin(arr, binary_image=False, in_place=False, preserve_endpoints=False)
+thin_arr = gaara.thin(filled, binary_image=False, in_place=False, preserve_endpoints=False)
 
 # For images larger than RAM
 # requires the "big" extra install dependency
