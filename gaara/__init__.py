@@ -80,6 +80,7 @@ def thin(
         num_deleted_points = fastgaara.thin_multilabel(
             labels,
             preserve_endpoints,
+            anchors,
             max_iterations
         )
 
@@ -140,7 +141,9 @@ def skeletonize(
         )
         skeletons = osteoid.Skeleton(vertices, edges)
     else:
-        skeletons = fastgaara.skeletonize_multilabel(labels, preserve_endpoints)
+        skeletons = fastgaara.skeletonize_multilabel(
+            labels, preserve_endpoints, anchors
+        )
         skeletons = { 
             segid: osteoid.Skeleton(vertices, edges) 
             for segid, (vertices, edges) in skeletons.items()
