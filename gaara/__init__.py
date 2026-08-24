@@ -14,6 +14,7 @@ def thin(
     binary_image:bool = False,
     in_place:bool = False,
     preserve_endpoints:bool = False,
+    preserve_coords:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
     max_iterations:int = -1,
     return_num_deleted_points:bool = False,
 ) -> npt.NDArray[np.integer]:
@@ -26,8 +27,11 @@ def thin(
     preserve_endpoints: mark endpoints 3x3x3 stencils containing exactly 2 foreground voxels
       for preservation. By default, the palagyi algorithm is more aggressive. It will mark
       "ismuths" for preservation, which erodes the ends a little bit.
+    max_iterations: restrict the algorithm to this many iterations. 
+        This is useful for debugging or designing chunked versions of the algorithm.
+    preserve: a list of (x,y,z) tuples that should be preserved.
 
-    Reference:
+    References:
 
     K. Palágyi, "A Sequential 3D Curve-Thinning Algorithm Based on Isthmuses,"
     in Advances in Visual Computing, vol. 8888,
@@ -36,6 +40,12 @@ def thin(
     and M. Carlson, Eds., 
     Cham: Springer International Publishing, 2014, pp. 406–415.
     doi: 10.1007/978-3-319-14364-4_39.
+
+    K. Palágyi and G. Németh, “Centerline Extraction from 3D Airway Trees Using Anchored Shrinking,”
+    in Advances in Visual Computing, G. Bebis, R. Boyle, B. Parvin, D. Koracin, D. Ushizima, 
+    S. Chai, S. Sueda, X. Lin, A. Lu, D. Thalmann, C. Wang, and P. Xu, Eds., 
+    Cham: Springer International Publishing, 2019, pp. 419–430. 
+    doi: 10.1007/978-3-030-33723-0_34.
     """
     if labels.ndim != 3:
         raise ValueError(f"This function only supports 3D images. Got: {labels.shape}")
@@ -55,10 +65,23 @@ def thin(
         binary_image = True
         labels = labels.view(np.uint8)
 
+    preserve_coords = np.asarray(preserve_coords).astype(np.uint16, copy=False)
+    if preserve_coords is not None and preserve_coords.ndim != 2 and preserve_coords.shape[1] != 3:
+        raise ValueError(f"Preserve must be an Nx3 array of voxel coordinates.")
+
     if binary_image:
-        num_deleted_points = fastgaara.thin_binary(labels, preserve_endpoints, max_iterations)
+        num_deleted_points = fastgaara.thin_binary(
+            labels, 
+            preserve_endpoints,
+            preserve_coords,
+            max_iterations,
+        )
     else:
-        num_deleted_points = fastgaara.thin_multilabel(labels, preserve_endpoints, max_iterations)
+        num_deleted_points = fastgaara.thin_multilabel(
+            labels,
+            preserve_endpoints,
+            max_iterations
+        )
 
     if return_num_deleted_points:
         return (labels, num_deleted_points)
@@ -70,6 +93,7 @@ def skeletonize(
     binary_image:bool = False,
     in_place:bool = False,
     preserve_endpoints:bool = False,
+    preserve_coords:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
 ) -> tuple[osteoid.Skeleton|dict[int,osteoid.Skeleton], npt.NDArray[np.integer]]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image
@@ -111,7 +135,9 @@ def skeletonize(
         labels = labels.view(np.uint8)
 
     if binary_image:
-        (vertices, edges) = fastgaara.skeletonize_binary(labels, preserve_endpoints)
+        (vertices, edges) = fastgaara.skeletonize_binary(
+            labels, preserve_endpoints, preserve_coords
+        )
         skeletons = osteoid.Skeleton(vertices, edges)
     else:
         skeletons = fastgaara.skeletonize_multilabel(labels, preserve_endpoints)

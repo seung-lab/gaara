@@ -90,8 +90,18 @@ py::array edges_to_numpy(const gaara::def::Skeleton& skel) {
 auto thin_binary(
 	const py::array& labels, 
 	const bool preserve_endpoints, 
+	const py::array_t<uint16_t>& preserve_coords,
 	const int64_t max_iterations = -1
 ) {
+	const uint64_t Npc = preserve_coords.shape()[0];
+
+	auto pc = preserve_coords.unchecked<2>();
+	std::vector<gaara::def::Voxel> coords;
+	coords.reserve(Npc);
+	for (uint64_t i = 0; i < Npc; i++) {
+		coords.emplace_back(pc(i,0), pc(i,1), pc(i,2));
+	}
+
 	return dispatch(labels, 
 		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
@@ -99,6 +109,7 @@ auto thin_binary(
 				data,
 				sx, sy, sz,
 				preserve_endpoints,
+				coords,
 				max_iterations
 			);
 		}
