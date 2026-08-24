@@ -284,6 +284,10 @@ int64_t thin(
 
 	for (auto& pt : anchors) {
 		const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
+		if (loc >= voxels) {
+			throw std::invalid_argument("anchors must be located inside the image.");
+		}
+		
 		if (label_status[loc] != PointStatus::BACKGROUND) {
 			label_status.set(loc, PointStatus::PRESERVE);
 		}
