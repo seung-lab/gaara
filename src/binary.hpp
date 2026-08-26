@@ -409,19 +409,12 @@ uint64_t kernel(
 		}
 	};
 
-	// jobs.clear();
-	// for (std::size_t t = 0; t < threads; t++) {
-	// 	jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
-	// }
-	// pool.run_batch(jobs);
-
-	for (std::size_t t = 0; t < threads; t++) {
+	for (unsigned int t = 0; t < threads; t++) {
 		phase2(t);
 	}
 
-
 	uint64_t number_of_deleted_points_total = 0;
-	for (int t = 0; t < threads; t++) {
+	for (unsigned int t = 0; t < threads; t++) {
 		number_of_deleted_points_total += number_of_deleted_points[t];
 	}
 
