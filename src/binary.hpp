@@ -409,11 +409,16 @@ uint64_t kernel(
 		}
 	};
 
-	jobs.clear();
+	// jobs.clear();
+	// for (std::size_t t = 0; t < threads; t++) {
+	// 	jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
+	// }
+	// pool.run_batch(jobs);
+
 	for (std::size_t t = 0; t < threads; t++) {
-		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
+		phase2(t);
 	}
-	pool.run_batch(jobs);
+
 
 	uint64_t number_of_deleted_points_total = 0;
 	for (int t = 0; t < threads; t++) {
@@ -503,9 +508,10 @@ auto skeletonize(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool preserve_endpoints = false,
-	const std::vector<Voxel> anchors = {}
+	const std::vector<Voxel> anchors = {},
+	unsigned int threads = 1
 ) {
-	thin(labels, sx, sy, sz, preserve_endpoints, anchors);
+	thin(labels, sx, sy, sz, preserve_endpoints, anchors, threads);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
 }
 

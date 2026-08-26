@@ -152,7 +152,8 @@ auto thin_multilabel(
 auto skeletonize_binary(
 	const py::array& labels, 
 	const bool preserve_endpoints,
-	const py::array_t<uint16_t>& anchors
+	const py::array_t<uint16_t>& anchors,
+	unsigned int threads = 1
 ) {
 
 	auto cpp_anchors = convert_anchors(anchors);
@@ -164,7 +165,8 @@ auto skeletonize_binary(
 				data,
 				sx, sy, sz,
 				preserve_endpoints,
-				cpp_anchors
+				cpp_anchors,
+				threads
 			);
 		}
 	);
