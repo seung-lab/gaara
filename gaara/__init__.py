@@ -260,6 +260,7 @@ def thin_crackle(
     
     compressed_chunks = []
     num_deleted_points = []
+    num_deleted_points_last_iter = []
 
     iterated_labels = labels
     iterated_labels.parallel = threads
@@ -303,18 +304,21 @@ def thin_crackle(
                 if verbose > 2:
                     print(f"fill_voids: {e - s:.2f}s")
 
-            s = time.perf_counter()
-            arr, N = thin(
-                arr, 
-                binary_image=binary_image,
-                preserve_endpoints=preserve_endpoints,
-                in_place=True,
-                max_iterations=padding,
-                return_num_deleted_points=True,
-            )
-            e = time.perf_counter()
-            if verbose > 2:
-                print(f"thinning: {e - s:.2f}s")
+            if num_iters == 0 or num_deleted_points_last_iter[i] > 0:
+                s = time.perf_counter()
+                arr, N = thin(
+                    arr, 
+                    binary_image=binary_image,
+                    preserve_endpoints=preserve_endpoints,
+                    in_place=True,
+                    max_iterations=padding,
+                    return_num_deleted_points=True,
+                )
+                e = time.perf_counter()
+                if verbose > 2:
+                    print(f"thinning: {e - s:.2f}s")
+            elif verbose > 2:
+                print("chunk fully thinned")
 
             num_deleted_points.append(N)
             
@@ -344,6 +348,7 @@ def thin_crackle(
         num_iters += 1
         
         compressed_chunks = []
+        num_deleted_points_last_iter = num_deleted_points
         num_deleted_points = []
 
         if verbose:
