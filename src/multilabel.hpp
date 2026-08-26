@@ -353,7 +353,7 @@ int64_t thin(
 			// put the simple decision behind an if else statement to avoid
 			// some calculation.
 			if (preserve_endpoints && popcount(config) == 1) {
-				labels[loc] = PointStatus::PRESERVE;
+				label_status.set(loc, PointStatus::PRESERVE);
 				it = border_points.erase(it);
 				continue;				
 			}
