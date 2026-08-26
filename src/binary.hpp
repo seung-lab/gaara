@@ -511,7 +511,7 @@ auto skeletonize(
 	const std::vector<Voxel> anchors = {},
 	unsigned int threads = 1
 ) {
-	thin(labels, sx, sy, sz, preserve_endpoints, anchors, threads);
+	thin(labels, sx, sy, sz, preserve_endpoints, anchors, -1, threads);
 	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
 }
 
