@@ -17,6 +17,7 @@ def thin(
     anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
     max_iterations:int = -1,
     return_num_deleted_points:bool = False,
+    threads:int = 1,
 ) -> npt.NDArray[np.integer]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image.
@@ -29,7 +30,10 @@ def thin(
       "ismuths" for preservation, which erodes the ends a little bit.
     max_iterations: restrict the algorithm to this many iterations. 
         This is useful for debugging or designing chunked versions of the algorithm.
-    preserve: a list of (x,y,z) tuples that should be preserved.
+    anchors: a list of (x,y,z) tuples that should be preserved.
+    threads: number of threads to use (binary images only)
+    return_num_deleted_points: if true, return a tuple (array, int) where
+        the second element is the number of voxels that were deleted.
 
     References:
 
@@ -75,6 +79,7 @@ def thin(
             preserve_endpoints,
             anchors,
             max_iterations,
+            threads
         )
     else:
         num_deleted_points = fastgaara.thin_multilabel(
@@ -95,6 +100,7 @@ def skeletonize(
     in_place:bool = False,
     preserve_endpoints:bool = False,
     anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
+    threads:int = 1,
 ) -> tuple[osteoid.Skeleton|dict[int,osteoid.Skeleton], npt.NDArray[np.integer]]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image
@@ -137,7 +143,7 @@ def skeletonize(
 
     if binary_image:
         (vertices, edges) = fastgaara.skeletonize_binary(
-            labels, preserve_endpoints, anchors
+            labels, preserve_endpoints, anchors, threads,
         )
         skeletons = osteoid.Skeleton(vertices, edges)
     else:
