@@ -30,7 +30,10 @@ def thin(
       "ismuths" for preservation, which erodes the ends a little bit.
     max_iterations: restrict the algorithm to this many iterations. 
         This is useful for debugging or designing chunked versions of the algorithm.
-    preserve: a list of (x,y,z) tuples that should be preserved.
+    anchors: a list of (x,y,z) tuples that should be preserved.
+    threads: number of threads to use (binary images only)
+    return_num_deleted_points: if true, return a tuple (array, int) where
+        the second element is the number of voxels that were deleted.
 
     References:
 

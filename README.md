@@ -25,7 +25,13 @@ filled, holes = fastmorph.fill_holes_v2(arr)
 # preserve_endpoints: mark endpoints 3x3x3 stencils containing exactly 2 foreground voxels
 #   for preservation. By default, the palagyi algorithm is more aggressive.
 
-skeletons, thin_arr = gaara.skeletonize(filled, binary_image=True, in_place=False, preserve_endpoints=False)
+skeletons, thin_arr = gaara.skeletonize(
+    filled,
+    binary_image=True,
+    in_place=False,
+    preserve_endpoints=False,
+    threads=2, # Threading only works for binary images right now
+)
 
 # You can specify points of interest ("anchors") to be preserved in voxel space
 skeletons, thin_arr = gaara.skeletonize(filled, anchors=[(10,10,10)])
