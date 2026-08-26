@@ -241,6 +241,7 @@ def thin_crackle(
             binary_image=binary_image,
             preserve_endpoints=preserve_endpoints,
             in_place=True,
+            threads=threads,
         )
         return crackle.compressa(labels, parallel=threads)
 
@@ -319,6 +320,7 @@ def thin_crackle(
                     in_place=True,
                     max_iterations=padding,
                     return_num_deleted_points=True,
+                    threads=threads,
                 )
                 e = time.perf_counter()
                 if verbose > 2:
