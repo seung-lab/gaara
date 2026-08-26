@@ -235,7 +235,6 @@ def thin_crackle(
             binary_image=binary_image,
             preserve_endpoints=preserve_endpoints,
             in_place=True,
-            threads=threads,
         )
         return crackle.compressa(labels, parallel=threads)
 
