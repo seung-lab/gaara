@@ -394,6 +394,7 @@ def extract_skeletons_crackle(
         threads = mp.cpu_count()
 
     labels = labels.asfortranarray()
+    labels = CrackleArray(labels.binary, parallel=threads)
     header = labels.header()
 
     slice_memory = header.data_width * header.sx * header.sy 
@@ -430,6 +431,9 @@ def extract_skeletons_crackle(
     cz = min(cz, header.sz)
     cz = int(cz)
 
+    if verbose:
+        print(f"chunk size: {cz}")
+
     estimated_memory_requirement += internal_factor * min(cz, header.sz) * slice_memory
     estimated_memory_requirement = int(estimated_memory_requirement)
 
@@ -450,7 +454,7 @@ def extract_skeletons_crackle(
         z_end = min((i+1) * cz, header.sz)
         
         if verbose:
-            print(f"z={z_start}:{z_end}")
+            print(f"z={z_start}:{z_end} ; {i/num_chunks*100.0:.2f}%")
 
         s = time.perf_counter()
         arr = labels[:,:, z_start:z_end ]
