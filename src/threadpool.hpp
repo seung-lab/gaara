@@ -57,6 +57,8 @@ public:
 
     template <typename Iterable>
     void run_batch(Iterable&& batch);
+    unsigned int num_threads() const;
+
 
     ~GaaraThreadPool();
 private:
@@ -76,6 +78,10 @@ inline GaaraThreadPool::GaaraThreadPool(size_t threads)
     :   stop(false)
 {
     start(threads);
+}
+
+unsigned int GaaraThreadPool::num_threads() const {
+    return workers.size();
 }
 
 void GaaraThreadPool::start(size_t threads) {

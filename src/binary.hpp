@@ -422,6 +422,41 @@ uint64_t kernel(
 }
 
 template <typename LABEL>
+void mask(LABEL* labels, const uint64_t voxels, GaaraThreadPool& pool) {
+	if (voxels == 0) {
+		return;
+	}
+
+	uint64_t chunk_size = voxels;
+	unsigned int threads = pool.num_threads();
+	const uint64_t min_chunk = 1000;
+
+	constexpr uint64_t one = 1;
+
+	if (min_chunk * threads > voxels) {
+		threads = std::max(voxels / min_chunk, one);
+		chunk_size = min_chunk;
+	}
+	else {
+		chunk_size = (voxels + threads - 1) / threads;
+		chunk_size = std::max(chunk_size, min_chunk);
+		threads = std::max(voxels / chunk_size, one);
+	}
+	
+	std::vector<std::function<void(std::size_t)>> jobs;
+	jobs.reserve(threads);
+	for (unsigned int t = 0; t < threads; t++) {
+		jobs.emplace_back([&,t](std::size_t ignore) {
+			uint64_t end = std::min(chunk_size * (t+1), voxels);
+			for (uint64_t i = chunk_size * t; i < end; i++) {
+				labels[i] = labels[i] > 0; // PointStatus::BACKGROUND or FOREGROUND
+			}
+		});
+	}
+	pool.run_batch(jobs);
+}
+
+template <typename LABEL>
 uint64_t thin(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
@@ -448,9 +483,9 @@ uint64_t thin(
 	// enforce binary image starting point
 	const uint64_t voxels = sx * sy * sz;
 
-	for (uint64_t i = 0; i < voxels; i++) {
-		labels[i] = labels[i] > 0; // PointStatus::BACKGROUND or FOREGROUND
-	}
+	GaaraThreadPool pool(threads);
+
+	mask(labels, voxels, pool);
 
 	std::vector<std::list<Voxel>> border_points = find_border_points(
 		labels, sx, sy, sz, /*erode_border=*/true, threads
@@ -472,8 +507,6 @@ uint64_t thin(
 	}
 
 	// U,N,E,S,W,D
-
-	GaaraThreadPool pool(threads);
 
 	do {
 		number_of_deleted_points = 0;
