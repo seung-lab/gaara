@@ -450,6 +450,23 @@ uint64_t kernel(
 		}
 	};
 
+	// This logic isn't obvious and interacts subtly with find_border_points.
+	// phase2 is difficult to parallelize because each voxel is pulling in
+	// neighbors that could be changing. Previously, this algorithm used a 
+	// round-robin scheduler that was easy to parallelize for phase1 but not
+	// phase2.
+
+	// Moving to z-slabs allowed superior parallelism in find_border_points
+	// which exploited the sliding window mechanism better. It also clustered
+	// border points per a slab, whose interiors are robust to conflict. However,
+	// the neighboring slabs could confict if they were running concurrently. 
+	// So we do even slabs then odd slabs. This allows each slab to peek into
+	// its neighbor's territory, but halves the parallelism.
+
+	// Second note: The high kernel usage is due to uneven distribution of border
+	// points per a slab. Some threads finish early and keep checking the pool.
+	// These issues are fixable, but require some more effort.
+
 	jobs.clear();
 	for (std::size_t t = 0; t < threads; t += 2) {
 		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
