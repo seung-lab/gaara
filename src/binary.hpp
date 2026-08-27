@@ -542,11 +542,9 @@ uint64_t thin(
 		num_iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || num_iterations < max_iterations));
 
-	pool.join();
+	mask(labels, voxels, pool);
 
-	for (uint64_t i = 0; i < voxels; i++) {
-		labels[i] = labels[i] > 0;
-	}
+	pool.join();
 
 	return number_of_deleted_points;
 }
