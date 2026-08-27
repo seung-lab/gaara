@@ -440,7 +440,6 @@ void mask(LABEL* labels, const uint64_t voxels, GaaraThreadPool& pool) {
 	else {
 		chunk_size = (voxels + threads - 1) / threads;
 		chunk_size = std::max(chunk_size, min_chunk);
-		threads = std::max(voxels / chunk_size, one);
 	}
 	
 	std::vector<std::function<void(std::size_t)>> jobs;
