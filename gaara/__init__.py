@@ -448,8 +448,21 @@ def extract_skeletons_crackle(
         z_start = (i * cz) - 1 # need 1 voxel of overlap
         z_start = max(z_start, 0)
         z_end = min((i+1) * cz, header.sz)
+        
+        if verbose:
+            print(f"z={z_start}:{z_end}")
+
+        s = time.perf_counter()
         arr = labels[:,:, z_start:z_end ]
+        e = time.perf_counter()
+        if verbose > 1:        
+            print(f"decompress: {e - s:.3f}s")
+
+        s = time.perf_counter()
         arr_skeletons = fastgaara.extract_skeletons(arr)
+        e = time.perf_counter()
+        if verbose > 1:        
+            print(f"extract: {e - s:.3f}s")
         del arr
 
         arr_skeletons = { 
@@ -457,6 +470,7 @@ def extract_skeletons_crackle(
             for segid, (vertices, edges) in arr_skeletons.items()
         }
 
+        s = time.perf_counter()
         for segid in arr_skeletons.keys():
             if segid not in skeletons:
                 skeletons[segid] = arr_skeletons[segid]
@@ -465,6 +479,9 @@ def extract_skeletons_crackle(
             skeletons[segid] = osteoid.Skeleton.simple_merge([ 
                 skeletons[segid], arr_skeletons[segid] 
             ])
+        e = time.perf_counter()
+        if verbose > 1:        
+            print(f"merge: {e - s:.3f}s")
 
     for segid in skeletons:
         skel = skeletons[segid]
