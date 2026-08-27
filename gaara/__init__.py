@@ -379,6 +379,7 @@ def extract_skeletons_crackle(
     import time
     import psutil
     import multiprocessing as mp
+    import tqdm
 
     assert threads >= 0
 
@@ -448,24 +449,32 @@ def extract_skeletons_crackle(
     skeletons = {}
 
     num_chunks = int(np.ceil(header.sz / cz))
-    for i in range(num_chunks):
+
+    loop_elapsed_sec = 0
+    total_elapsed_sec = 0
+
+    for i in tqdm.trange(num_chunks, desc="Slabs", disable=(verbose != 1)):
+        s_loop = time.perf_counter()
         z_start = (i * cz) - 1 # need 1 voxel of overlap
         z_start = max(z_start, 0)
         z_end = min((i+1) * cz, header.sz)
         
-        if verbose:
-            print(f"z={z_start}:{z_end} ; {i/num_chunks*100.0:.2f}%")
+        percent = f"{i/num_chunks*100.0:.2f}%"
+        eta = (num_chunks - i - 1) * loop_elapsed_sec
+
+        if verbose > 1:
+            print(f"z={z_start}:{z_end} ; {percent} ; eta {eta:.1f} sec ; elapsed {total_elapsed_sec:.1f} sec")
 
         s = time.perf_counter()
         arr = labels[:,:, z_start:z_end ]
         e = time.perf_counter()
-        if verbose > 1:        
+        if verbose > 2:        
             print(f"decompress: {e - s:.3f}s")
 
         s = time.perf_counter()
         arr_skeletons = fastgaara.extract_skeletons(arr)
         e = time.perf_counter()
-        if verbose > 1:        
+        if verbose > 2:        
             print(f"extract: {e - s:.3f}s")
         del arr
 
@@ -484,8 +493,12 @@ def extract_skeletons_crackle(
                 skeletons[segid], arr_skeletons[segid] 
             ])
         e = time.perf_counter()
-        if verbose > 1:        
+        if verbose > 2:        
             print(f"merge: {e - s:.3f}s")
+
+        e_loop = time.perf_counter()
+        loop_elapsed_sec = e_loop - s_loop
+        total_elapsed_sec += loop_elapsed_sec
 
     for segid in skeletons:
         skel = skeletons[segid]
