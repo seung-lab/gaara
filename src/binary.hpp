@@ -382,6 +382,9 @@ uint64_t kernel(
 
 	std::vector<uint64_t> number_of_deleted_points(threads);
 
+	uint64_t cz = (sz + threads - 1) / threads;
+	cz = std::max(cz, (uint64_t)1);
+
 	// Phase 2
 	auto phase2 = [&](std::size_t t) {
 		for (Iterator& it : potentially_deletable[t]) {
@@ -416,7 +419,9 @@ uint64_t kernel(
 			}
 			if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
 				labels[loc-sxy] = PointStatus::BORDER;
-				border_points[t].emplace_back(pt.x, pt.y, pt.z - 1);
+    			int t_owner = (pt.z == t * cz) ? (t - 1) : t;
+    			t_owner = std::max(t_owner, 0);
+				border_points[t_owner].emplace_back(pt.x, pt.y, pt.z - 1);
 			}
 			if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
 				labels[loc+1] = PointStatus::BORDER;
@@ -428,14 +433,24 @@ uint64_t kernel(
 			}
 			if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
 				labels[loc+sxy] = PointStatus::BORDER;
-				border_points[t].emplace_back(pt.x, pt.y, pt.z + 1);
+    			int t_owner = (pt.z + 1 == (t + 1) * cz) ? (t + 1) : t;
+    			t_owner = std::min(t_owner, ((int)threads)-1);
+				border_points[t_owner].emplace_back(pt.x, pt.y, pt.z + 1);
 			}
 		}
 	};
 
-	for (unsigned int t = 0; t < threads; t++) {
-		phase2(t);
+	jobs.clear();
+	for (std::size_t t = 0; t < threads; t += 2) {
+		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
 	}
+	pool.run_batch(jobs);
+
+	jobs.clear();
+	for (std::size_t t = 1; t < threads; t += 2) {
+		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
+	}
+	pool.run_batch(jobs);
 
 	uint64_t number_of_deleted_points_total = 0;
 	for (unsigned int t = 0; t < threads; t++) {
