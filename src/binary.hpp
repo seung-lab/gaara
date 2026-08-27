@@ -141,9 +141,11 @@ template <typename LABEL>
 auto find_border_points(
 	LABEL* labels,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool erode_border = true,
-	const int threads = 1
+	const bool erode_border,
+	GaaraThreadPool& pool
 ) {
+
+	const unsigned int threads = pool.num_threads();
 
 	// assume a 3x3x3 stencil with all voxels on
 	const uint64_t sxy = sx * sy;
@@ -183,7 +185,10 @@ auto find_border_points(
 		}
 	};
 
+	std::vector<std::list<Voxel>> border_points(threads);
+
 	auto process_block = [&](
+		const unsigned int t,
 		const uint64_t xs, const uint64_t xe, 
 		const uint64_t ys, const uint64_t ye, 
 		const uint64_t zs, const uint64_t ze
@@ -193,10 +198,6 @@ auto find_border_points(
 		bool pure_right = true;
 
 		int stale_stencil = 3;
-
-		std::vector<std::list<Voxel>> border_points(threads);
-
-		int t = 0;
 
 		for (uint64_t z = zs; z < ze; z++) {
 			for (uint64_t y = ys; y < ye; y++) {
@@ -249,18 +250,41 @@ auto find_border_points(
 					if (!pure_right || !pure_middle || !pure_left) {
 						labels[loc] = PointStatus::BORDER;
 						border_points[t].emplace_back(x,y,z);
-						t = (t == threads - 1) ? 0 : t + 1;
 					}
 
 					stale_stencil = 1;
 				}
 			}
 		}
-
-		return border_points;
 	};
 
-	return process_block(0, sx, 0, sy, 0, sz);
+	uint64_t cz = (sz + threads - 1) / threads;
+	cz = std::max(cz, (uint64_t)1);
+
+	std::vector<std::function<void(std::size_t)>> jobs;
+	jobs.reserve(threads);
+	for (int t = 0; t < threads; t++) {
+		jobs.emplace_back([&,t](size_t ignore) {
+			const uint64_t start = t * cz;
+			const uint64_t end = std::min((t+1) * cz, sz);
+			process_block(t, 0, sx, 0, sy, start, end);
+		});
+	}
+
+	pool.run_batch(jobs);
+	
+	return border_points;
+}
+
+template <typename LABEL>
+auto find_border_points(
+	LABEL* labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool erode_border = true,
+	const unsigned int threads = 1
+) {
+	GaaraThreadPool pool(threads);
+	return find_border_points(labels, sx, sy, sz, erode_border, pool);
 }
 
 template <typename LABEL>
@@ -487,7 +511,7 @@ uint64_t thin(
 	mask(labels, voxels, pool);
 
 	std::vector<std::list<Voxel>> border_points = find_border_points(
-		labels, sx, sy, sz, /*erode_border=*/true, threads
+		labels, sx, sy, sz, /*erode_border=*/true, pool
 	);
 	std::vector<std::deque<Iterator>> potentially_deletable(threads);
 
