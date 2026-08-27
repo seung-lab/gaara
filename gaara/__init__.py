@@ -445,7 +445,8 @@ def extract_skeletons_crackle(
 
     num_chunks = int(np.ceil(header.sz / cz))
     for i in range(num_chunks):
-        z_start = i * cz
+        z_start = (i * cz) - 1 # need 1 voxel of overlap
+        z_start = max(z_start, 0)
         z_end = min((i+1) * cz, header.sz)
         arr = labels[:,:, z_start:z_end ]
         arr_skeletons = fastgaara.extract_skeletons(arr)
@@ -455,7 +456,6 @@ def extract_skeletons_crackle(
             segid: osteoid.Skeleton(vertices, edges, segid=segid)
             for segid, (vertices, edges) in arr_skeletons.items()
         }
-
 
         for segid in arr_skeletons.keys():
             if segid not in skeletons:
