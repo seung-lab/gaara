@@ -385,8 +385,13 @@ uint64_t kernel(
 	uint64_t cz = (sz + threads - 1) / threads;
 	cz = std::max(cz, (uint64_t)1);
 
+	std::mutex mtx;
+
 	// Phase 2
 	auto phase2 = [&](std::size_t t) {
+
+		std::vector<std::list<Voxel>> outgoing(threads);
+
 		for (Iterator& it : potentially_deletable[t]) {
 			const Voxel pt = *it;
 			
@@ -411,32 +416,37 @@ uint64_t kernel(
 
 			if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {
 				labels[loc-1] = PointStatus::BORDER;
-				border_points[t].emplace_back(pt.x - 1, pt.y, pt.z);
+				outgoing[t].emplace_back(pt.x - 1, pt.y, pt.z);
 			}
 			if (pt.y > 0 && labels[loc-sx] == PointStatus::FOREGROUND) {
 				labels[loc-sx] = PointStatus::BORDER;
-				border_points[t].emplace_back(pt.x, pt.y - 1, pt.z);
+				outgoing[t].emplace_back(pt.x, pt.y - 1, pt.z);
 			}
 			if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
 				labels[loc-sxy] = PointStatus::BORDER;
     			int t_owner = (pt.z == t * cz) ? (t - 1) : t;
     			t_owner = std::max(t_owner, 0);
-				border_points[t_owner].emplace_back(pt.x, pt.y, pt.z - 1);
+				outgoing[t_owner].emplace_back(pt.x, pt.y, pt.z - 1);
 			}
 			if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
 				labels[loc+1] = PointStatus::BORDER;
-				border_points[t].emplace_back(pt.x + 1, pt.y, pt.z);
+				outgoing[t].emplace_back(pt.x + 1, pt.y, pt.z);
 			}
 			if (pt.y < sy - 1 && labels[loc+sx] == PointStatus::FOREGROUND) {
 				labels[loc+sx] = PointStatus::BORDER;
-				border_points[t].emplace_back(pt.x, pt.y + 1, pt.z);
+				outgoing[t].emplace_back(pt.x, pt.y + 1, pt.z);
 			}
 			if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
 				labels[loc+sxy] = PointStatus::BORDER;
     			int t_owner = (pt.z + 1 == (t + 1) * cz) ? (t + 1) : t;
     			t_owner = std::min(t_owner, ((int)threads)-1);
-				border_points[t_owner].emplace_back(pt.x, pt.y, pt.z + 1);
+				outgoing[t_owner].emplace_back(pt.x, pt.y, pt.z + 1);
 			}
+		}
+
+		std::unique_lock<std::mutex> lock(mtx);
+		for (int t = 0; t < outgoing.size(); t++) {
+			border_points[t].splice(border_points[t].end(), outgoing[t]);
 		}
 	};
 
