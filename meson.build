@@ -25,6 +25,11 @@ py.install_sources(
   subdir: 'gaara',
 )
 
+cpp_args = ['-DGAARA_STATICALLY_LINK_LUTS']
+if host_machine.system() == 'darwin'
+  cpp_args += ['-mmacosx-version-min=11.0']
+endif
+
 target = py.extension_module(
   'fastgaara',
   src_files,
@@ -34,10 +39,7 @@ target = py.extension_module(
     include_directories(numpy_incdir),
     include_directories(pybind11_incdir),
   ],
-  cpp_args: [
-    '-DGAARA_STATICALLY_LINK_LUTS',
-    '-mmacosx-version-min=11.0',
-  ],
+  cpp_args: cpp_args,
   install: true,
   subdir: 'gaara',
 )
