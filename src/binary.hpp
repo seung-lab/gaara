@@ -383,14 +383,16 @@ uint64_t kernel(
 	std::vector<uint64_t> number_of_deleted_points(threads);
 
 	uint64_t cz = (sz + threads - 1) / threads;
-	cz = std::max(cz, (uint64_t)1);
+	cz = std::max(cz, (uint64_t)2); // cz must be >= 2 to avoid lock confliction
 
-	std::mutex mtx;
+	std::mutex splice_guard;
+	std::vector<std::mutex> boundary_deconfliction(threads);
 
 	// Phase 2
-	auto phase2 = [&](std::size_t t) {
-
+	auto phase2 = [&](unsigned int t) {
 		std::vector<std::list<Voxel>> outgoing(threads);
+
+		std::unique_lock<std::mutex> boundary_lock; 
 
 		for (Iterator& it : potentially_deletable[t]) {
 			const Voxel pt = *it;
@@ -401,11 +403,22 @@ uint64_t kernel(
 			 && pt.z > 0 && pt.z < sz - 1
 			);
 
+			// CRITICAL: require cz > 1 or else deadlocks can happen
+			if (pt.z > 0 && pt.z == cz * t) {
+				boundary_lock = std::unique_lock<std::mutex>(boundary_deconfliction[t - 1]);
+			}
+			else if (pt.z < sz - 1 && pt.z == (cz * (t+1)) - 1) {
+				boundary_lock = std::unique_lock<std::mutex>(boundary_deconfliction[t]);
+			}
+
 			const uint32_t config = interior
 				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
 				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
 
 			if (!simple_lut[config]) {
+				if (boundary_lock.owns_lock()) {
+					boundary_lock.release(); 
+				}
 				continue;
 			}
 
@@ -442,12 +455,16 @@ uint64_t kernel(
     			t_owner = std::min(t_owner, ((int)threads)-1);
 				outgoing[t_owner].emplace_back(pt.x, pt.y, pt.z + 1);
 			}
+
+			if (boundary_lock.owns_lock()) {
+            	boundary_lock.release(); 
+        	}
 		}
 
-		std::unique_lock<std::mutex> lock(mtx);
+		std::unique_lock<std::mutex> lock(splice_guard);
 		for (int t = 0; t < outgoing.size(); t++) {
 			border_points[t].splice(border_points[t].end(), outgoing[t]);
-		}
+		}	
 	};
 
 	// This logic isn't obvious and interacts subtly with find_border_points.
@@ -468,13 +485,7 @@ uint64_t kernel(
 	// These issues are fixable, but require some more effort.
 
 	jobs.clear();
-	for (std::size_t t = 0; t < threads; t += 2) {
-		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
-	}
-	pool.run_batch(jobs);
-
-	jobs.clear();
-	for (std::size_t t = 1; t < threads; t += 2) {
+	for (std::size_t t = 0; t < threads; t++) {
 		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
 	}
 	pool.run_batch(jobs);
@@ -544,6 +555,12 @@ uint64_t thin(
 		threads = std::thread::hardware_concurrency();
 	}
 	threads = std::min(threads, std::thread::hardware_concurrency());
+
+	// cz must be >= 2 to avoid deadlocks in phase 2
+	// work lists are assigned based on thread count.
+	if (sz / threads == 0) {
+		threads = std::max((unsigned int)sz / 2, (unsigned int)1);
+	}
 
 	// enforce binary image starting point
 	const uint64_t voxels = sx * sy * sz;
