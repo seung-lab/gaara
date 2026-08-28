@@ -34,7 +34,10 @@ target = py.extension_module(
     include_directories(numpy_incdir),
     include_directories(pybind11_incdir),
   ],
-  cpp_args: ['-DGAARA_STATICALLY_LINK_LUTS'],
+  cpp_args: [
+    '-DGAARA_STATICALLY_LINK_LUTS',
+    '-mmacosx-version-min=11.0',
+  ],
   install: true,
   subdir: 'gaara',
 )
