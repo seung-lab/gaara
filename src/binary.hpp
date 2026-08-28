@@ -417,7 +417,7 @@ uint64_t kernel(
 
 			if (!simple_lut[config]) {
 				if (boundary_lock.owns_lock()) {
-					boundary_lock.release(); 
+					boundary_lock.unlock();
 				}
 				continue;
 			}
@@ -457,8 +457,8 @@ uint64_t kernel(
 			}
 
 			if (boundary_lock.owns_lock()) {
-            	boundary_lock.release(); 
-        	}
+				boundary_lock.unlock();
+			}
 		}
 
 		std::unique_lock<std::mutex> lock(splice_guard);
@@ -559,7 +559,7 @@ uint64_t thin(
 	// cz must be >= 2 to avoid deadlocks in phase 2
 	// work lists are assigned based on thread count.
 	if (sz / threads == 0) {
-		threads = std::max((unsigned int)sz / 2, (unsigned int)1);
+		threads = std::max((unsigned int)(sz+1) / 2, (unsigned int)1);
 	}
 
 	// enforce binary image starting point
