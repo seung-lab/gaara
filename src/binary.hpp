@@ -392,11 +392,15 @@ uint64_t kernel(
 	std::mutex splice_guard;
 	std::vector<std::mutex> boundary_deconfliction(threads);
 
+	std::vector<std::vector<std::forward_list<Voxel>>> all_outgoing(
+		threads, std::vector<std::forward_list<Voxel>>(threads)
+	);
+
 	// Phase 2
 	auto phase2 = [&](unsigned int t) {
-		std::vector<std::forward_list<Voxel>> outgoing(threads);
+		std::unique_lock<std::mutex> boundary_lock;
 
-		std::unique_lock<std::mutex> boundary_lock; 
+		auto& outgoing = all_outgoing[t];
 
 		for (Iterator& prev : potentially_deletable[t]) {
 			auto it = std::next(prev);
@@ -468,11 +472,6 @@ uint64_t kernel(
 				boundary_lock.unlock();
 			}
 		}
-
-		std::unique_lock<std::mutex> lock(splice_guard);
-		for (int t = 0; t < outgoing.size(); t++) {
-			border_points[t].splice_after(border_points[t].before_begin(), outgoing[t]);
-		}	
 	};
 
 	// This logic isn't obvious and interacts subtly with find_border_points.
@@ -497,6 +496,12 @@ uint64_t kernel(
 		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
 	}
 	pool.run_batch(jobs);
+
+	for (unsigned int src = 0; src < threads; src++) {
+		for (unsigned int dst = 0; dst < threads; dst++) {
+			border_points[dst].splice_after(border_points[dst].before_begin(), all_outgoing[src][dst]);
+		}
+	}
 
 	uint64_t number_of_deleted_points_total = 0;
 	for (unsigned int t = 0; t < threads; t++) {
