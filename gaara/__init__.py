@@ -166,6 +166,7 @@ def thin_crackle(
     padding:int = 1,
     verbose:int = 0,
     fill_holes:bool = True,
+    checkpoints:int = 0,
 ) -> "CrackleArray":
     """
     Apply Palagyi's 3D voxel thinning algorithm to a CrackleArray.
@@ -178,6 +179,8 @@ def thin_crackle(
     preserve_endpoints: mark endpoints 3x3x3 stencils containing exactly 2 foreground voxels
       for preservation. By default, the palagyi algorithm is more aggressive. It will mark
       "ismuths" for preservation, which erodes the ends a little bit.
+    
+    checkpoints: save "checkpoint.ckl" every xth iteration. 0 means no checkpoints.
 
     Reference:
 
@@ -355,6 +358,11 @@ def thin_crackle(
         points_deleted_this_round = np.sum(num_deleted_points)
         num_iters += 1
         
+        if checkpoints > 0 and num_iters % checkpoints == 0:
+            iterated_labels.save("checkpoint.ckl")
+            with open("checkpoints.txt", "at") as f:
+                f.write(f"checkpoint {num_iters} ; {time.time():.1f}\n")
+
         compressed_chunks = []
         num_deleted_points_last_iter = num_deleted_points
         num_deleted_points = []
