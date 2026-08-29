@@ -362,6 +362,8 @@ def thin_crackle(
             iterated_labels.save("checkpoint.ckl")
             with open("checkpoints.txt", "at") as f:
                 f.write(f"checkpoint {num_iters} ; {time.time():.1f}\n")
+            if verbose:
+                print(f"saved checkpoint")
 
         compressed_chunks = []
         num_deleted_points_last_iter = num_deleted_points
