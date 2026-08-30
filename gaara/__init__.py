@@ -14,7 +14,7 @@ def thin(
     binary_image:bool = False,
     in_place:bool = False,
     preserve_endpoints:bool = False,
-    anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
+    anchors:npt.NDArray[np.uint16] = np.empty((0, 3), dtype=np.uint16),
     max_iterations:int = -1,
     return_num_deleted_points:bool = False,
     threads:int = 1,
