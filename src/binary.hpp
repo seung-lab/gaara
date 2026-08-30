@@ -482,13 +482,8 @@ uint64_t kernel(
 	// Moving to z-slabs allowed superior parallelism in find_border_points
 	// which exploited the sliding window mechanism better. It also clustered
 	// border points per a slab, whose interiors are robust to conflict. However,
-	// the neighboring slabs could confict if they were running concurrently. 
-	// So we do even slabs then odd slabs. This allows each slab to peek into
-	// its neighbor's territory, but halves the parallelism.
-
-	// Second note: The high kernel usage is due to uneven distribution of border
-	// points per a slab. Some threads finish early and keep checking the pool.
-	// These issues are fixable, but require some more effort.
+	// the neighboring slabs could conflict if they were running concurrently so
+	// this must be managed carefully.
 
 	jobs.clear();
 	for (std::size_t t = 0; t < threads; t++) {
