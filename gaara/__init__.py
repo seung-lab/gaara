@@ -489,7 +489,7 @@ def extract_skeletons_crackle(
         del arr
 
         arr_skeletons = { 
-            segid: osteoid.Skeleton(vertices, edges, segid=segid)
+            segid: osteoid.Skeleton(vertices, edges, segid=segid, default_attributes=False)
             for segid, (vertices, edges) in arr_skeletons.items()
         }
 
