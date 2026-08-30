@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <deque>
-#include <list>
+#include <forward_list>
 #include <functional>
 #include <stdexcept>
 #include <thread>
@@ -19,7 +19,7 @@ using namespace gaara::def;
 namespace gaara::binary {
 
 
-using Iterator = std::list<Voxel>::iterator;
+using Iterator = std::forward_list<Voxel>::iterator;
 
 // map for i variable (skip center to save space)
 
@@ -185,7 +185,7 @@ auto find_border_points(
 		}
 	};
 
-	std::vector<std::list<Voxel>> border_points(threads);
+	std::vector<std::forward_list<Voxel>> border_points(threads);
 
 	auto process_block = [&](
 		const unsigned int t,
@@ -249,7 +249,7 @@ auto find_border_points(
 					
 					if (!pure_right || !pure_middle || !pure_left) {
 						labels[loc] = PointStatus::BORDER;
-						border_points[t].emplace_back(x,y,z);
+						border_points[t].emplace_front(x,y,z);
 					}
 
 					stale_stencil = 1;
@@ -292,7 +292,7 @@ uint64_t kernel(
 	ThinningDirection direction,
 	LABEL* labels, 
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	std::vector<std::list<Voxel>>& border_points,
+	std::vector<std::forward_list<Voxel>>& border_points,
 	std::vector<std::deque<Iterator>>& potentially_deletable,
 	const bool preserve_endpoints,
 	const unsigned int threads,
@@ -330,13 +330,16 @@ uint64_t kernel(
 	BorderCheckFn border_check_fn = direction_map[direction];
 
 	auto phase1 = [&](std::size_t t) {
-		for (auto it = border_points[t].begin(); it != border_points[t].end();) {
+		auto it = border_points[t].begin();
+		auto prev = border_points[t].before_begin();
+
+		while (it != border_points[t].end()) {
 			const Voxel pt = *it;
 			const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
 
 			// Should this ever happen?
 			if (labels[loc] != PointStatus::BORDER) {
-				it = border_points[t].erase(it);
+				it = border_points[t].erase_after(prev);
 				continue;
 			}
 
@@ -357,18 +360,19 @@ uint64_t kernel(
 			// some calculation.
 			if (preserve_endpoints && popcount(config) == 1) {
 				labels[loc] = PointStatus::PRESERVE;
-				it = border_points[t].erase(it);
+				it = border_points[t].erase_after(prev);
 				continue;				
 			}
 			else if (isthmus_lut[config]) {
 				labels[loc] = PointStatus::PRESERVE;
-				it = border_points[t].erase(it);
+				it = border_points[t].erase_after(prev);
 				continue;
 			}
 			else if (border_check_fn(pt, loc) && simple_lut[config]) {
-				potentially_deletable[t].emplace_back(it);
+				potentially_deletable[t].emplace_front(prev);
 			}
 
+			prev = it;
 			it++;
 		}
 	};
@@ -385,16 +389,23 @@ uint64_t kernel(
 	uint64_t cz = (sz + threads - 1) / threads;
 	cz = std::max(cz, (uint64_t)2); // cz must be >= 2 to avoid lock confliction
 
-	std::mutex splice_guard;
 	std::vector<std::mutex> boundary_deconfliction(threads);
+
+	std::vector<std::vector<std::forward_list<Voxel>>> all_outgoing(
+		threads, std::vector<std::forward_list<Voxel>>(threads)
+	);
 
 	// Phase 2
 	auto phase2 = [&](unsigned int t) {
-		std::vector<std::list<Voxel>> outgoing(threads);
+		std::unique_lock<std::mutex> boundary_lock;
 
-		std::unique_lock<std::mutex> boundary_lock; 
+		auto& outgoing = all_outgoing[t];
 
-		for (Iterator& it : potentially_deletable[t]) {
+		for (Iterator& prev : potentially_deletable[t]) {
+			auto it = std::next(prev);
+			if (it == border_points[t].end()) {
+        		continue;
+    		}
 			const Voxel pt = *it;
 			
 			const bool interior = (
@@ -424,47 +435,42 @@ uint64_t kernel(
 
 			const uint64_t loc = pt.x + sx * (pt.y + sy * pt.z);
 			labels[loc] = PointStatus::BACKGROUND;
-			border_points[t].erase(it);
+			border_points[t].erase_after(prev);
 			number_of_deleted_points[t]++;
 
 			if (pt.x > 0 && labels[loc-1] == PointStatus::FOREGROUND) {
 				labels[loc-1] = PointStatus::BORDER;
-				outgoing[t].emplace_back(pt.x - 1, pt.y, pt.z);
+				outgoing[t].emplace_front(pt.x - 1, pt.y, pt.z);
 			}
 			if (pt.y > 0 && labels[loc-sx] == PointStatus::FOREGROUND) {
 				labels[loc-sx] = PointStatus::BORDER;
-				outgoing[t].emplace_back(pt.x, pt.y - 1, pt.z);
+				outgoing[t].emplace_front(pt.x, pt.y - 1, pt.z);
 			}
 			if (pt.z > 0 && labels[loc-sxy] == PointStatus::FOREGROUND) {
 				labels[loc-sxy] = PointStatus::BORDER;
     			int t_owner = (pt.z == t * cz) ? (t - 1) : t;
     			t_owner = std::max(t_owner, 0);
-				outgoing[t_owner].emplace_back(pt.x, pt.y, pt.z - 1);
+				outgoing[t_owner].emplace_front(pt.x, pt.y, pt.z - 1);
 			}
 			if (pt.x < sx - 1 && labels[loc+1] == PointStatus::FOREGROUND) {
 				labels[loc+1] = PointStatus::BORDER;
-				outgoing[t].emplace_back(pt.x + 1, pt.y, pt.z);
+				outgoing[t].emplace_front(pt.x + 1, pt.y, pt.z);
 			}
 			if (pt.y < sy - 1 && labels[loc+sx] == PointStatus::FOREGROUND) {
 				labels[loc+sx] = PointStatus::BORDER;
-				outgoing[t].emplace_back(pt.x, pt.y + 1, pt.z);
+				outgoing[t].emplace_front(pt.x, pt.y + 1, pt.z);
 			}
 			if (pt.z < sz - 1 && labels[loc+sxy] == PointStatus::FOREGROUND) {
 				labels[loc+sxy] = PointStatus::BORDER;
     			int t_owner = (pt.z + 1 == (t + 1) * cz) ? (t + 1) : t;
     			t_owner = std::min(t_owner, ((int)threads)-1);
-				outgoing[t_owner].emplace_back(pt.x, pt.y, pt.z + 1);
+				outgoing[t_owner].emplace_front(pt.x, pt.y, pt.z + 1);
 			}
 
 			if (boundary_lock.owns_lock()) {
 				boundary_lock.unlock();
 			}
 		}
-
-		std::unique_lock<std::mutex> lock(splice_guard);
-		for (int t = 0; t < outgoing.size(); t++) {
-			border_points[t].splice(border_points[t].end(), outgoing[t]);
-		}	
 	};
 
 	// This logic isn't obvious and interacts subtly with find_border_points.
@@ -489,6 +495,12 @@ uint64_t kernel(
 		jobs.emplace_back([&,t](std::size_t ignore) { phase2(t); });
 	}
 	pool.run_batch(jobs);
+
+	for (unsigned int src = 0; src < threads; src++) {
+		for (unsigned int dst = 0; dst < threads; dst++) {
+			border_points[dst].splice_after(border_points[dst].before_begin(), all_outgoing[src][dst]);
+		}
+	}
 
 	uint64_t number_of_deleted_points_total = 0;
 	for (unsigned int t = 0; t < threads; t++) {
@@ -569,7 +581,7 @@ uint64_t thin(
 
 	mask(labels, voxels, pool);
 
-	std::vector<std::list<Voxel>> border_points = find_border_points(
+	std::vector<std::forward_list<Voxel>> border_points = find_border_points(
 		labels, sx, sy, sz, /*erode_border=*/true, pool
 	);
 	std::vector<std::deque<Iterator>> potentially_deletable(threads);

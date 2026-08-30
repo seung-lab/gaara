@@ -39,7 +39,7 @@ TEST(Gaara, TestFindBorderPointsBinary) {
 	auto num_pts = [](auto bp){ 
 		uint64_t num = 0;
 		for (int i = 0; i < bp.size(); i++) {
-			num += bp[i].size();
+			num += std::distance(bp[i].begin(), bp[i].end());
 		}
 		return num;
 	};
