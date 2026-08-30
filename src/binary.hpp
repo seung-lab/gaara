@@ -389,7 +389,6 @@ uint64_t kernel(
 	uint64_t cz = (sz + threads - 1) / threads;
 	cz = std::max(cz, (uint64_t)2); // cz must be >= 2 to avoid lock confliction
 
-	std::mutex splice_guard;
 	std::vector<std::mutex> boundary_deconfliction(threads);
 
 	std::vector<std::vector<std::forward_list<Voxel>>> all_outgoing(
