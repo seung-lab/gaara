@@ -383,7 +383,26 @@ def extract_skeletons_crackle(
     memory:int = -1,
     threads:int = 0,
     verbose:int = 0,
+    require_chunking:bool = False,
 ) -> dict[int, osteoid.Skeleton]:
+    """
+    Extract completed skeletons from a thinned crackle compressed
+    image.
+
+    memory: -1, allow use of system memory, otherwise, try to target
+        this size in bytes.
+    threads: number of threads to use for decompression
+    verbose:
+        0: no printing
+        1: progress bar
+        2: current chunk
+        3: function timings
+    require_chunking:
+        This is for testing to force skipping the fast path even if there
+        is sufficient memory for it.
+
+    Returns: { segid: skeleton }
+    """
     import crackle
     from crackle import CrackleArray
     import time
@@ -424,7 +443,7 @@ def extract_skeletons_crackle(
     estimated_memory_requirement += len(labels)
     estimated_memory_requirement = int(estimated_memory_requirement)
 
-    if estimated_memory_requirement < memory and estimated_memory_requirement < system_memory:
+    if not require_chunking and estimated_memory_requirement < memory and estimated_memory_requirement < system_memory:
         if verbose:
             print("Processing all at once.")
             print(f"Estimated Memory Requirement: {estimated_memory_requirement} bytes")
