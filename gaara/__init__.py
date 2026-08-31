@@ -498,13 +498,13 @@ def extract_skeletons_crackle(
         arr = labels[:,:, z_start:z_end ]
         e = time.perf_counter()
         if verbose > 2:        
-            print(f"decompress: {e - s:.3f}s")
+            print(f"decompress: {e - s:.3f}s, {arr.size / (e-s) / 1e6:.1f} MVx/sec")
 
         s = time.perf_counter()
         arr_skeletons = fastgaara.extract_skeletons(arr)
         e = time.perf_counter()
         if verbose > 2:        
-            print(f"extract: {e - s:.3f}s")
+            print(f"extract: {e - s:.3f}s, {arr.size / (e-s) / 1e6:.1f} MVx/sec")
         del arr
 
         arr_skeletons = { 
@@ -525,7 +525,7 @@ def extract_skeletons_crackle(
             ])
         e = time.perf_counter()
         if verbose > 2:        
-            print(f"merge: {e - s:.3f}s")
+            print(f"merge: {e - s:.3f}s, {len(skeletons)} skels")
 
         e_loop = time.perf_counter()
         loop_elapsed_sec = e_loop - s_loop
