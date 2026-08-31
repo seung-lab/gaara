@@ -26,7 +26,9 @@ def test_extract_skeleton_crackle():
 	img = crackle.compressa(img)
 	skels = gaara.extract_skeletons_crackle(
 		img,
-		
+		memory=int(1e9),
+		require_chunking=True,
+		threads=1,
 	)
 
 	skel = skels[1]
