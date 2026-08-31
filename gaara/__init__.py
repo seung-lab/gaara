@@ -514,7 +514,7 @@ def extract_skeletons_crackle(
 
         s = time.perf_counter()
         for segid in arr_skeletons.keys():
-            arr_skeletons[segid].vertices += z_start
+            arr_skeletons[segid].vertices[:,2] += z_start
 
             if segid not in skeletons:
                 skeletons[segid] = arr_skeletons[segid]
