@@ -108,12 +108,17 @@ def skeletonize(
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image
     and return skeletons.
 
-    in_place: modify the input array in_place (saves memory)
     binary_image: consider the input image a binary image (foreground/bg only)
       regardless of values. 0 is background.
+    in_place: modify the input array in_place (saves memory)
     preserve_endpoints: mark endpoints 3x3x3 stencils containing exactly 2 foreground voxels
       for preservation. By default, the palagyi algorithm is more aggressive. It will mark
       "ismuths" for preservation, which erodes the ends a little bit.
+    anchors: an Nx3 array of integer coordinates that tell the thinning algorithm
+        to preserve the indicated voxels.
+    radius: compute the euclidean (L2) distance transfrom and assign the values
+        to the "radius" parameter of the skeleton
+    threads: number of threads to use, 0 means all cores
 
     Reference:
 

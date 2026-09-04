@@ -24,12 +24,14 @@ filled, holes = fastmorph.fill_holes_v2(arr)
 #   regardless of values. 0 is background.
 # preserve_endpoints: mark endpoints 3x3x3 stencils containing exactly 2 foreground voxels
 #   for preservation. By default, the palagyi algorithm is more aggressive.
+# radius: at the cost of a full distance transform, also record vertex radii
 
 skeletons, thin_arr = gaara.skeletonize(
     filled,
     binary_image=True,
     in_place=False,
     preserve_endpoints=False,
+    radius=True, 
     threads=2, # Threading only works for binary images right now
 )
 
