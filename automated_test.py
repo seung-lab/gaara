@@ -16,6 +16,36 @@ def test_thin(binary_image):
 
 	assert np.sum(ones) == 1
 
+@pytest.mark.parametrize("binary_image", [True, False])
+def test_skeletonize(binary_image):
+	ones = np.zeros([10,10,10], dtype=np.uint64, order="F")
+	ones[4:7,4:7,:] = 1
+	
+	# import microviewer
+	# microviewer.view(ones, seg=True)
+
+	skeletons, labels = gaara.skeletonize(
+		ones,
+		binary_image=binary_image,
+		radius=True,
+	)
+
+	if not binary_image:
+		skeletons = skeletons[1]
+
+	gt = np.array([
+		[5, 5, 1],
+		[5, 5, 2],
+		[5, 5, 3],
+		[5, 5, 4],
+		[5, 5, 5],
+		[5, 5, 6],
+		[5, 5, 7],
+		[5, 5, 8],
+	], dtype=np.uint32)
+
+	assert np.all(gt == skeletons.vertices)
+	assert np.all(skeletons.radius == 2)
 
 def test_extract_skeleton_crackle():
 	sz = 200

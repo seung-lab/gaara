@@ -101,6 +101,7 @@ def skeletonize(
     in_place:bool = False,
     preserve_endpoints:bool = False,
     anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
+    radius:bool = True,
     threads:int = 1,
 ) -> tuple[Skeleton|dict[int,Skeleton], npt.NDArray[np.integer]]:
     """
@@ -137,6 +138,11 @@ def skeletonize(
     elif not in_place:
         labels = np.copy(labels, order="F")
 
+    dt = None
+    if radius:
+        import edt
+        dt = edt.edt(labels, parallel=threads)
+
     orig_dtype = labels.dtype
     if labels.dtype == bool:
         binary_image = True
@@ -146,17 +152,29 @@ def skeletonize(
         (vertices, edges) = fastgaara.skeletonize_binary(
             labels, preserve_endpoints, anchors, threads,
         )
-        skeletons = osteoid.Skeleton(vertices, edges)
+        skeletons = { 1: Skeleton(vertices, edges, default_attributes=False) }
     else:
         skeletons = fastgaara.skeletonize_multilabel(
             labels, preserve_endpoints, anchors
         )
         skeletons = { 
-            segid: osteoid.Skeleton(vertices, edges) 
+            segid: Skeleton(vertices, edges, default_attributes=False) 
             for segid, (vertices, edges) in skeletons.items()
         }
 
-    return (skeletons, labels)
+    if radius:
+        for skel in skeletons.values():
+            verts = skel.vertices.astype(np.uint16)
+            if len(verts) == 0:
+                continue
+
+            vradii = dt[verts[:,0], verts[:,1], verts[:, 2]]
+            p = skel.add_vertex_attribute('radius', vradii)
+
+    if binary_image:
+        return (skeletons[1], labels)
+    else:
+        return (skeletons, labels)
     
 def thin_crackle(
     labels:Union["CrackleArray", bytes],
