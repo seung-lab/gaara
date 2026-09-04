@@ -6,7 +6,7 @@ build-backend = "mesonpy"
 name = "gaara"
 dynamic = ["version"]
 requires-python = ">=3.10"
-dependencies = ["numpy", "osteoid"]
+dependencies = ["numpy", "osteoid", "edt"]
 authors = [
     { name = "William Silversmith", email = "ws9@princeton.edu" }
 ]
