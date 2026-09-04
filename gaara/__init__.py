@@ -4,6 +4,7 @@ import numpy as np
 import numpy.typing as npt
 
 import osteoid
+from osteoid import Skeleton
 
 from . import fastgaara
 
@@ -101,7 +102,7 @@ def skeletonize(
     preserve_endpoints:bool = False,
     anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
     threads:int = 1,
-) -> tuple[osteoid.Skeleton|dict[int,osteoid.Skeleton], npt.NDArray[np.integer]]:
+) -> tuple[Skeleton|dict[int,Skeleton], npt.NDArray[np.integer]]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image
     and return skeletons.
@@ -384,7 +385,7 @@ def extract_skeletons_crackle(
     threads:int = 0,
     verbose:int = 0,
     require_chunking:bool = False,
-) -> dict[int, osteoid.Skeleton]:
+) -> dict[int, Skeleton]:
     """
     Extract completed skeletons from a thinned crackle compressed
     image.
@@ -450,7 +451,7 @@ def extract_skeletons_crackle(
         
         skeletons = fastgaara.extract_skeletons(labels.numpy())
         return { 
-            segid: osteoid.Skeleton(vertices, edges, segid=segid)
+            segid: Skeleton(vertices, edges, segid=segid)
             for segid, (vertices, edges) in skeletons.items()
         }
 
@@ -508,7 +509,7 @@ def extract_skeletons_crackle(
         del arr
 
         arr_skeletons = { 
-            segid: osteoid.Skeleton(vertices, edges, segid=segid, default_attributes=False)
+            segid: Skeleton(vertices, edges, segid=segid, default_attributes=False)
             for segid, (vertices, edges) in arr_skeletons.items()
         }
 
@@ -520,7 +521,7 @@ def extract_skeletons_crackle(
                 skeletons[segid] = arr_skeletons[segid]
                 continue
 
-            skeletons[segid] = osteoid.Skeleton.simple_merge([ 
+            skeletons[segid] = Skeleton.simple_merge([ 
                 skeletons[segid], arr_skeletons[segid] 
             ])
         e = time.perf_counter()
