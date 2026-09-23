@@ -292,9 +292,11 @@ def thin_crackle(
             f"Estimated memory requirement: {estimated_memory_requirement / 1e9:.1f} GB."
         )
     
-    compressed_chunks = []
-    num_deleted_points = []
-    num_deleted_points_last_iter = []
+    num_chunks = max(int(np.ceil(header.sz / cz)), 0)
+
+    compressed_chunks = [ None ] * num_chunks
+    num_deleted_points = np.zeros([num_chunks], dtype=np.int64)
+    num_deleted_points_last_iter = np.zeros([num_chunks], dtype=np.int64)
 
     iterated_labels = labels
     iterated_labels.parallel = threads
@@ -309,8 +311,10 @@ def thin_crackle(
         if verbose:
             print(f"Iteration {num_iters}")
 
-        i = 0
-        while True:
+        for i in range(num_chunks):
+            if num_iters > 0 and num_deleted_points_last_iter[i] == 0:
+                continue
+
             z = (i * cz)
             if z == 0:
                 chunk_start = 0
@@ -355,7 +359,7 @@ def thin_crackle(
             elif verbose > 2:
                 print("chunk fully thinned")
 
-            num_deleted_points.append(N)
+            num_deleted_points[i] = N
             
             if chunk_start != 0:
                 arr = arr[:,:,padding:]
@@ -363,18 +367,11 @@ def thin_crackle(
                 arr = arr[:,:,:-padding]
 
             s = time.perf_counter()
-            compressed_chunks.append(
-                crackle.compressa(arr, parallel=threads)
-            )
+            compressed_chunks[i] = crackle.compressa(arr, parallel=threads)
             e = time.perf_counter()
             if verbose > 2:
                 print(f"compress: {e - s:.2f}s")
             del arr
-
-            i += 1
-
-            if chunk_end >= header.sz:
-                break
 
         iterated_labels = CrackleArray(crackle.zstack(compressed_chunks))
         iterated_labels.parallel = threads
@@ -389,9 +386,8 @@ def thin_crackle(
             if verbose:
                 print(f"saved checkpoint")
 
-        compressed_chunks = []
         num_deleted_points_last_iter = num_deleted_points
-        num_deleted_points = []
+        num_deleted_points[:] = 0
 
         if verbose:
             print(f"points deleted: {points_deleted_this_round}")
