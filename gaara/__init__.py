@@ -386,7 +386,7 @@ def thin_crackle(
             if verbose:
                 print(f"saved checkpoint")
 
-        num_deleted_points_last_iter = num_deleted_points
+        num_deleted_points_last_iter = num_deleted_points.copy()
         num_deleted_points[:] = 0
 
         if verbose:
