@@ -6,7 +6,7 @@ build-backend = "mesonpy"
 name = "gaara"
 dynamic = ["version"]
 requires-python = ">=3.10"
-dependencies = ["numpy", "osteoid", "edt"]
+dependencies = ["numpy", "osteoid", "edt", "click"]
 authors = [
     { name = "William Silversmith", email = "ws9@princeton.edu" }
 ]
@@ -38,3 +38,6 @@ big = ["crackle-codec", "fill_voids", "psutil", "tqdm"]
 Homepage = "https://github.com/seung-lab/gaara/"
 Repository = "https://github.com/seung-lab/gaara/"
 "Bug Tracker" = "https://github.com/seung-lab/gaara/issues"
+
+[project.scripts]
+gaara = "gaara.cli:main"

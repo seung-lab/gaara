@@ -22,6 +22,8 @@ src_files = files('gaara/fastgaara.cpp')
 
 py.install_sources(
   'gaara/__init__.py',
+  'gaara/thin.py',
+  'gaara/cli.py',
   subdir: 'gaara',
 )
 
