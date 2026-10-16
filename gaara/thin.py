@@ -478,7 +478,7 @@ def extract_skeletons_crackle(
         
         skeletons = fastgaara.extract_skeletons(labels.numpy())
         return { 
-            segid: Skeleton(vertices, edges, segid=segid)
+            segid: Skeleton(vertices, edges, segid=segid, default_attributes=False)
             for segid, (vertices, edges) in skeletons.items()
         }
 
