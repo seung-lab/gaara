@@ -1,8 +1,22 @@
 import click
 import crackle
+import numpy as np
 
 import os
 import time
+
+class Tuple3(click.ParamType):
+  """A command line option type consisting of 3 comma-separated integers."""
+  name = 'tuple3'
+  def convert(self, value, param, ctx):
+    if isinstance(value, str):
+      try:
+        value = tuple(map(int, value.split(',')))
+      except ValueError:
+        self.fail(f"'{value}' does not contain a comma delimited list of 3 integers.")
+      if len(value) != 3:
+        self.fail(f"'{value}' does not contain a comma delimited list of 3 integers.")
+    return value
 
 @click.group()
 def main():
@@ -83,7 +97,8 @@ def thin(path, output, verbose, no_mmap, threads, checkpoint, padding, memory):
 @click.option('--no-mmap', is_flag=True, default=False, help="Disallow reading the input file with mmap. This can be important on e.g. NFS mounts.", show_default=True)
 @click.option('-t', '--threads', default=0, help="Number of threads to use.", show_default=True)
 @click.option('--memory', type=int, default=-1, help="How much memory in bytes to use.", show_default=True)
-def extract(path, output, verbose, no_mmap, threads, memory):
+@click.option('--resolution', type=Tuple3(), default="1,1,1", help="How much memory in bytes to use.", show_default=True)
+def extract(path, output, verbose, no_mmap, threads, memory, resolution):
 	import gaara
 
 	os.makedirs(output, exist_ok=True)
@@ -105,7 +120,14 @@ def extract(path, output, verbose, no_mmap, threads, memory):
 	with open(provenance, "wt") as f:
 		f.write(f"These skeletons were generated from {path}")
 
+	transform = np.eye(4, dtype=np.float32)
+	transform[0,0] = resolution[0]
+	transform[1,1] = resolution[1]
+	transform[2,2] = resolution[2]
+	transform = transform[:3,:]
+
 	for segid, skeleton in skeletons.items():
+		skeleton.transform = transform
 		save_path = os.path.join(output, f"{segid}.ostd")
 		skeleton.save(save_path)
 
