@@ -137,6 +137,65 @@ uint32_t foreground_configuration(
 	return index;
 }
 
+template <uint32_t VC_POS, uint32_t GAARA_POS>
+constexpr void apply_mask(uint32_t& index, uint32_t vc) {
+    constexpr uint32_t GAARA_MASK = 1u << GAARA_POS;
+    uint32_t bit = (vc >> VC_POS) & 1u;
+    index &= ~GAARA_MASK | (bit << GAARA_POS);
+}
+
+// graph conventions defined here and above
+// https://github.com/seung-lab/connected-components-3d/blob/3.2.0/cc3d_graphs.hpp#L73-L92
+template <typename LABEL, bool Interior>
+uint32_t foreground_configuration(
+	LABEL* labels,  const uint32_t vc, // voxel connectivity
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const uint64_t x, const uint64_t y, const uint64_t z  
+) {
+	
+	uint32_t index = foreground_configuration<LABEL, Interior>(
+		labels,
+		sx, sy, sz,
+		x, y, z
+	);
+
+	// This mapping thanks to DeepSeek's assistance with interpolating
+	// between the cc3d VCG bit position map and the Gaara bit position map
+	// defined above.
+	apply_mask< 0, 13>(index, vc);  // +x          -> (+1, 0, 0)
+	apply_mask< 1, 12>(index, vc);  // -x          -> (-1, 0, 0)
+	apply_mask< 2, 15>(index, vc);  // +y          -> ( 0,+1, 0)
+	apply_mask< 3, 10>(index, vc);  // -y          -> ( 0,-1, 0)
+	apply_mask< 4, 21>(index, vc);  // +z          -> ( 0, 0,+1)
+	apply_mask< 5,  4>(index, vc);  // -z          -> ( 0, 0,-1)
+
+	apply_mask< 6, 16>(index, vc);  // xy   (+x+y) -> (+1,+1, 0)
+	apply_mask< 7, 14>(index, vc);  // -xy  (-x+y) -> (-1,+1, 0)
+	apply_mask< 8, 11>(index, vc);  // x-y  (+x-y) -> (+1,-1, 0)
+	apply_mask< 9,  9>(index, vc);  // -x-y        -> (-1,-1, 0)
+
+	apply_mask<10, 22>(index, vc);  // xz   (+x+z) -> (+1, 0,+1)
+	apply_mask<11, 20>(index, vc);  // -xz  (-x+z) -> (-1, 0,+1)
+	apply_mask<12, 24>(index, vc);  // yz   (+y+z) -> ( 0,+1,+1)
+	apply_mask<13, 18>(index, vc);  // -yz  (-y+z) -> ( 0,-1,+1)
+
+	apply_mask<14,  5>(index, vc);  // x-z  (+x-z) -> (+1, 0,-1)
+	apply_mask<15,  3>(index, vc);  // -x-z        -> (-1, 0,-1)
+	apply_mask<16,  7>(index, vc);  // y-z  (+y-z) -> ( 0,+1,-1)
+	apply_mask<17,  1>(index, vc);  // -y-z        -> ( 0,-1,-1)
+
+	apply_mask<18, 25>(index, vc);  // xyz         -> (+1,+1,+1)
+	apply_mask<19, 23>(index, vc);  // -x+y+z      -> (-1,+1,+1)
+	apply_mask<20, 19>(index, vc);  // +x-y+z      -> (+1,-1,+1)
+	apply_mask<21, 17>(index, vc);  // -x-y+z      -> (-1,-1,+1)
+	apply_mask<22,  8>(index, vc);  // +x+y-z      -> (+1,+1,-1)
+	apply_mask<23,  6>(index, vc);  // -x+y-z      -> (-1,+1,-1)
+	apply_mask<24,  2>(index, vc);  // x-y-z (+x-y-z) -> (+1,-1,-1)
+	apply_mask<25,  0>(index, vc);  // -x-y-z      -> (-1,-1,-1)
+
+	return index;
+}
+
 template <typename LABEL>
 auto find_border_points(
 	LABEL* labels,
