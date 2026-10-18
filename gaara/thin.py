@@ -24,6 +24,7 @@ def thin(
     max_iterations:int = -1,
     return_num_deleted_points:bool = False,
     threads:int = 1,
+    voxel_graph:Optional[npt.NDArray[np.uint32]] = None,
 ) -> npt.NDArray[np.integer]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image.
@@ -40,6 +41,8 @@ def thin(
     threads: number of threads to use (binary images only)
     return_num_deleted_points: if true, return a tuple (array, int) where
         the second element is the number of voxels that were deleted.
+    voxel_graph: 26-connected voxel connectivity graph based on 
+        cc3d's format. This is useful for distangling autapses.
 
     References:
 
@@ -85,8 +88,11 @@ def thin(
             preserve_endpoints,
             anchors,
             max_iterations,
-            threads
+            threads,
+            voxel_graph
         )
+    elif voxel_graph is not None:
+        raise NotImplementedError("voxel_graph is not yet supported for multilabel images.")
     else:
         num_deleted_points = fastgaara.thin_multilabel(
             labels,
