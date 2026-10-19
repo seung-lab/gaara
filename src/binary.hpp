@@ -364,7 +364,7 @@ auto find_border_points(
 	const unsigned int threads = 1
 ) {
 	GaaraThreadPool pool(threads);
-	const unsigned int threads = pool.num_threads();
+	
 	std::vector<std::forward_list<Voxel>> border_points(threads);
 
 	const uint32_t twenty_six_connected = 0b11111111111111111111111111;
@@ -387,7 +387,7 @@ auto find_border_points(
 				}
 			}
 		}
-	}
+	};
 
 	uint64_t cz = (sz + threads - 1) / threads;
 	cz = std::max(cz, (uint64_t)1);
