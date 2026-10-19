@@ -148,7 +148,7 @@ constexpr void apply_mask(uint32_t& index, uint32_t vc) {
 // https://github.com/seung-lab/connected-components-3d/blob/3.2.0/cc3d_graphs.hpp#L73-L92
 template <typename LABEL, bool Interior>
 uint32_t foreground_configuration(
-	LABEL* labels,  uint32_t* vcg, // voxel connectivity
+	LABEL* labels,  const uint32_t* vcg, // voxel connectivity graph
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const uint64_t x, const uint64_t y, const uint64_t z  
 ) {
@@ -358,13 +358,13 @@ auto find_border_points(
 // which allows one to distangle autapses.
 template <typename LABEL>
 auto find_border_points(
-	LABEL* labels, uint32_t* vcg,
+	LABEL* labels, const uint32_t* vcg,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const bool erode_border = true,
-	const unsigned int threads = 1
+	const bool erode_border,
+	GaaraThreadPool& pool
 ) {
-	GaaraThreadPool pool(threads);
-	
+
+	unsigned int threads = pool.num_threads();
 	std::vector<std::forward_list<Voxel>> border_points(threads);
 
 	const uint32_t twenty_six_connected = 0b11111111111111111111111111;
@@ -410,7 +410,7 @@ auto find_border_points(
 template <typename LABEL>
 uint64_t kernel(
 	ThinningDirection direction,
-	LABEL* labels, uint32_t* vcg,
+	LABEL* labels, const uint32_t* vcg,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	std::vector<std::forward_list<Voxel>>& border_points,
 	std::vector<std::deque<Iterator>>& potentially_deletable,
@@ -667,7 +667,7 @@ uint64_t thin(
 	const std::vector<Voxel> anchors = {}, 
 	const int64_t max_iterations = -1,
 	unsigned int threads = 1,
-	uint32_t* vcg = nullptr
+	const uint32_t* vcg = nullptr
 ) {
 	if (labels == nullptr) {
 		throw std::invalid_argument("Null pointer provided for data.");
