@@ -203,6 +203,7 @@ def thin_crackle(
     fill_holes:bool = True,
     checkpoints:int = 0,
     require_chunking:bool = False,
+    vcgfn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
 ) -> "CrackleArray":
     """
     Apply Palagyi's 3D voxel thinning algorithm to a CrackleArray.
@@ -219,6 +220,15 @@ def thin_crackle(
     checkpoints: save "checkpoint.ckl" every xth iteration. 0 means no checkpoints.
     require_chunking: for testing, force using the chunked path even if there is 
         enough memory to do it all in one shot.
+    vcgfn: A function taking z_start and z_end that produces a 26-connected
+        uint32 voxel connectivity graph (VCG) in the form given by cc3d. The x and y
+        dimensions must match the input labels.
+
+        The VCG is used to disambiguate self-touches (autapses) that would otherwise
+        appear to be a single contiguous image. VCG is currently only supported for
+        binary images.
+
+        Using a VCG will increase the memory requirement.
 
     Reference:
 
@@ -258,15 +268,18 @@ def thin_crackle(
     labels = labels.asfortranarray()
     header = labels.header()
 
-    slice_memory = header.data_width * header.sx * header.sy 
+    sxy = header.sx * header.sy 
+    slice_memory = sxy * header.data_width
     # Estimate of crackle per-slice decoding memory usage
-    decoding_memory = (header.data_width + 4) * slice_memory * threads # ccl + slice 
-
+    decoding_memory = (header.data_width + 4) * sxy * threads # uint32 ccl + slice 
     estimated_memory_requirement = header.data_width * header.voxels()
     estimated_memory_requirement *= 1.2 # for algorithm interal data structures
     estimated_memory_requirement += decoding_memory
     estimated_memory_requirement += len(labels) * 3
     estimated_memory_requirement = int(estimated_memory_requirement)
+
+    if vcgfn is not None:
+        estimated_memory_requirement += 4 * header.voxels() # uint32 vcg
 
     system_memory = psutil.virtual_memory().total
 
@@ -296,6 +309,10 @@ def thin_crackle(
     cz = int(cz)
 
     estimated_memory_requirement += internal_factor * min((cz + 2 * padding), header.sz) * slice_memory
+
+    if vcgfn is not None:
+        estimated_memory_requirement += min((cz + 2 * padding), header.sz) * sxy * 4 # vcg uint32 range
+
     estimated_memory_requirement = int(estimated_memory_requirement)
 
     if estimated_memory_requirement > min(memory, system_memory):
@@ -320,6 +337,7 @@ def thin_crackle(
         print(f"Estimated Memory Requirement: {estimated_memory_requirement} bytes")
 
     num_iters = 0
+    vcg = None
 
     while True:
         if verbose:
@@ -356,6 +374,14 @@ def thin_crackle(
                 if verbose > 2:
                     print(f"fill_voids: {e - s:.2f}s")
 
+            if vcgfn is not None:
+                s = time.perf_counter()
+                vcg = vcgfn(chunk_start, chunk_end)                
+                e = time.perf_counter()
+
+                if verbose > 2:
+                    print(f"vcg decode: {e - s:.2f}s")
+
             if num_iters == 0 or num_deleted_points_last_iter[i] > 0:
                 s = time.perf_counter()
                 arr, N = thin(
@@ -366,6 +392,7 @@ def thin_crackle(
                     max_iterations=padding,
                     return_num_deleted_points=True,
                     threads=threads,
+                    vcg=vcg,
                 )
                 e = time.perf_counter()
                 if verbose > 2:
@@ -373,6 +400,7 @@ def thin_crackle(
             elif verbose > 2:
                 print("chunk fully thinned")
 
+            vcg = None
             num_deleted_points[i] = N
             
             if chunk_start != 0:
@@ -418,6 +446,7 @@ def extract_skeletons_crackle(
     threads:int = 0,
     verbose:int = 0,
     require_chunking:bool = False,
+    vcgfn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
 ) -> dict[int, Skeleton]:
     """
     Extract completed skeletons from a thinned crackle compressed
@@ -434,6 +463,15 @@ def extract_skeletons_crackle(
     require_chunking:
         This is for testing to force skipping the fast path even if there
         is sufficient memory for it.
+
+    vcgfn: A function taking z_start and z_end that produces a 26-connected
+        uint32 voxel connectivity graph (VCG) in the form given by cc3d. The x and y
+        dimensions must match the input labels.
+
+        The VCG is used to disambiguate self-touches (autapses) that would otherwise
+        appear to be a single contiguous image.
+
+        Using a VCG will increase the memory requirement.
 
     Returns: { segid: skeleton }
     """
@@ -475,6 +513,10 @@ def extract_skeletons_crackle(
     estimated_memory_requirement *= internal_factor # for algorithm interal data structures
     estimated_memory_requirement += decoding_memory
     estimated_memory_requirement += len(labels)
+
+    if vcgfn is not None:
+        estimated_memory_requirement += 4 * header.voxels()
+
     estimated_memory_requirement = int(estimated_memory_requirement)
 
     if not require_chunking and estimated_memory_requirement < memory and estimated_memory_requirement < system_memory:
@@ -499,6 +541,10 @@ def extract_skeletons_crackle(
         print(f"chunk size: {cz}")
 
     estimated_memory_requirement += internal_factor * min(cz, header.sz) * slice_memory
+
+    if vcgfn is not None:
+        estimated_memory_requirement += min(cz, header.sz) * 4 * header.sx * header.sy
+
     estimated_memory_requirement = int(estimated_memory_requirement)
 
     if estimated_memory_requirement > min(memory, system_memory):
@@ -510,6 +556,7 @@ def extract_skeletons_crackle(
         )
 
     skeletons = {}
+    vcg = None
 
     num_chunks = int(np.ceil(header.sz / cz))
 
@@ -534,12 +581,20 @@ def extract_skeletons_crackle(
         if verbose > 2:        
             print(f"decompress: {e - s:.3f}s, {arr.size / (e-s) / 1e6:.1f} MVx/sec")
 
+        if vcgfn is not None:
+            s = time.perf_counter()
+            vcg = vcgfn(z_start, z_end)
+            e = time.perf_counter()
+            if verbose > 2:        
+                print(f"vcg: {e - s:.3f}s, {vcg.size / (e-s) / 1e6:.1f} MVx/sec")
+
         s = time.perf_counter()
-        arr_skeletons = fastgaara.extract_skeletons(arr)
+        arr_skeletons = fastgaara.extract_skeletons(arr, vcg)
         e = time.perf_counter()
         if verbose > 2:        
             print(f"extract: {e - s:.3f}s, {arr.size / (e-s) / 1e6:.1f} MVx/sec")
         del arr
+        vcg = None
 
         arr_skeletons = { 
             segid: Skeleton(vertices, edges, segid=segid, default_attributes=False)
