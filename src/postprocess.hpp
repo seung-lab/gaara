@@ -144,9 +144,8 @@ Edges connected_component(
 template <typename LABEL>
 std::unordered_map<uint64_t, gaara::def::Skeleton> 
 extract_skeletons(
-	LABEL* labels,
-	const uint64_t sx, const uint64_t sy, const uint64_t sz,
-	const uint32_t* vcg = nullptr
+	LABEL* labels, 	const uint32_t* vcg,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
 	const uint64_t voxels = sx * sy * sz;
 

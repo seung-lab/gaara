@@ -222,12 +222,20 @@ auto skeletonize_multilabel(
 	return py_skeletons;
 }
 
-auto extract_skeletons(const py::array& labels) {
+auto extract_skeletons(
+	const py::array& labels,
+	std::optional<
+		py::array_t<uint32_t, py::array::f_style>
+	> py_vcg = std::nullopt
+) {
+
+	const uint32_t* vcg = py_vcg ? py_vcg->data() : nullptr;
+
 	auto skeletons = dispatch(labels, 
 		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::postprocess::extract_skeletons<T>(
-				data,
+				data, vcg,
 				sx, sy, sz
 			);
 		}

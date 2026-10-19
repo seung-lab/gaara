@@ -449,7 +449,7 @@ auto skeletonize(
 	const std::vector<Voxel> anchors = {}
 ) {
 	thin(labels, sx, sy, sz, preserve_endpoints, anchors);
-	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz);
+	return gaara::postprocess::extract_skeletons(labels, nullptr, sx, sy, sz);
 }
 
 
