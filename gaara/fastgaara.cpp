@@ -159,7 +159,8 @@ auto skeletonize_binary(
 	const py::array& labels, 
 	const bool preserve_endpoints,
 	const py::array_t<uint16_t>& anchors,
-	unsigned int threads = 1
+	unsigned int threads = 1,
+	const uint32_t* vcg = nullptr
 ) {
 
 	auto cpp_anchors = convert_anchors(anchors);
@@ -172,7 +173,8 @@ auto skeletonize_binary(
 				sx, sy, sz,
 				preserve_endpoints,
 				cpp_anchors,
-				threads
+				threads,
+				vcg
 			);
 		}
 	);

@@ -114,6 +114,7 @@ def skeletonize(
     anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
     radius:bool = True,
     threads:int = 1,
+    voxel_graph:Optional[npt.NDArray[np.uint32]] = None,
 ) -> tuple[Skeleton|dict[int,Skeleton], npt.NDArray[np.integer]]:
     """
     Apply Palagyi's 3D voxel thinning algorithm to `labels`, a binary image
@@ -130,6 +131,9 @@ def skeletonize(
     radius: compute the euclidean (L2) distance transfrom and assign the values
         to the "radius" parameter of the skeleton
     threads: number of threads to use, 0 means all cores
+    voxel_graph: 26-connected voxel connectivity graph based on 
+        cc3d's format. This is useful for distangling autapses.
+        This is only supported for binary images currently.
 
     Reference:
 
@@ -166,9 +170,11 @@ def skeletonize(
 
     if binary_image:
         (vertices, edges) = fastgaara.skeletonize_binary(
-            labels, preserve_endpoints, anchors, threads,
+            labels, preserve_endpoints, anchors, threads, voxel_graph,
         )
         skeletons = { 1: Skeleton(vertices, edges, default_attributes=False) }
+    elif voxel_graph is not None:
+        raise NotImplementedError("voxel_graph is not yet implemented for multilabel images.")
     else:
         skeletons = fastgaara.skeletonize_multilabel(
             labels, preserve_endpoints, anchors
@@ -203,7 +209,7 @@ def thin_crackle(
     fill_holes:bool = True,
     checkpoints:int = 0,
     require_chunking:bool = False,
-    vcgfn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
+    voxel_graph_fn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
 ) -> "CrackleArray":
     """
     Apply Palagyi's 3D voxel thinning algorithm to a CrackleArray.
@@ -220,7 +226,7 @@ def thin_crackle(
     checkpoints: save "checkpoint.ckl" every xth iteration. 0 means no checkpoints.
     require_chunking: for testing, force using the chunked path even if there is 
         enough memory to do it all in one shot.
-    vcgfn: A function taking z_start and z_end that produces a 26-connected
+    voxel_graph_fn: A function taking z_start and z_end that produces a 26-connected
         uint32 voxel connectivity graph (VCG) in the form given by cc3d. The x and y
         dimensions must match the input labels.
 
@@ -278,7 +284,7 @@ def thin_crackle(
     estimated_memory_requirement += len(labels) * 3
     estimated_memory_requirement = int(estimated_memory_requirement)
 
-    if vcgfn is not None:
+    if voxel_graph_fn is not None:
         estimated_memory_requirement += 4 * header.voxels() # uint32 vcg
 
     system_memory = psutil.virtual_memory().total
@@ -310,7 +316,7 @@ def thin_crackle(
 
     estimated_memory_requirement += internal_factor * min((cz + 2 * padding), header.sz) * slice_memory
 
-    if vcgfn is not None:
+    if voxel_graph_fn is not None:
         estimated_memory_requirement += min((cz + 2 * padding), header.sz) * sxy * 4 # vcg uint32 range
 
     estimated_memory_requirement = int(estimated_memory_requirement)
@@ -374,9 +380,9 @@ def thin_crackle(
                 if verbose > 2:
                     print(f"fill_voids: {e - s:.2f}s")
 
-            if vcgfn is not None:
+            if voxel_graph_fn is not None:
                 s = time.perf_counter()
-                vcg = vcgfn(chunk_start, chunk_end)                
+                vcg = voxel_graph_fn(chunk_start, chunk_end)                
                 e = time.perf_counter()
 
                 if verbose > 2:
@@ -446,7 +452,7 @@ def extract_skeletons_crackle(
     threads:int = 0,
     verbose:int = 0,
     require_chunking:bool = False,
-    vcgfn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
+    voxel_graph_fn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
 ) -> dict[int, Skeleton]:
     """
     Extract completed skeletons from a thinned crackle compressed
@@ -464,7 +470,7 @@ def extract_skeletons_crackle(
         This is for testing to force skipping the fast path even if there
         is sufficient memory for it.
 
-    vcgfn: A function taking z_start and z_end that produces a 26-connected
+    voxel_graph_fn: A function taking z_start and z_end that produces a 26-connected
         uint32 voxel connectivity graph (VCG) in the form given by cc3d. The x and y
         dimensions must match the input labels.
 
@@ -514,7 +520,7 @@ def extract_skeletons_crackle(
     estimated_memory_requirement += decoding_memory
     estimated_memory_requirement += len(labels)
 
-    if vcgfn is not None:
+    if voxel_graph_fn is not None:
         estimated_memory_requirement += 4 * header.voxels()
 
     estimated_memory_requirement = int(estimated_memory_requirement)
@@ -542,7 +548,7 @@ def extract_skeletons_crackle(
 
     estimated_memory_requirement += internal_factor * min(cz, header.sz) * slice_memory
 
-    if vcgfn is not None:
+    if voxel_graph_fn is not None:
         estimated_memory_requirement += min(cz, header.sz) * 4 * header.sx * header.sy
 
     estimated_memory_requirement = int(estimated_memory_requirement)
@@ -581,9 +587,9 @@ def extract_skeletons_crackle(
         if verbose > 2:        
             print(f"decompress: {e - s:.3f}s, {arr.size / (e-s) / 1e6:.1f} MVx/sec")
 
-        if vcgfn is not None:
+        if voxel_graph_fn is not None:
             s = time.perf_counter()
-            vcg = vcgfn(z_start, z_end)
+            vcg = voxel_graph_fn(z_start, z_end)
             e = time.perf_counter()
             if verbose > 2:        
                 print(f"vcg: {e - s:.3f}s, {vcg.size / (e-s) / 1e6:.1f} MVx/sec")
