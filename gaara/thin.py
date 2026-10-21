@@ -519,6 +519,7 @@ def extract_skeletons_crackle(
     labels = labels.asfortranarray()
     labels = CrackleArray(labels.binary, parallel=threads)
     header = labels.header()
+    vcg = None
 
     slice_memory = header.data_width * header.sx * header.sy 
     # Estimate of crackle per-slice decoding memory usage
@@ -545,7 +546,10 @@ def extract_skeletons_crackle(
             print("Processing all at once.")
             print(f"Estimated Memory Requirement: {estimated_memory_requirement} bytes")
         
-        skeletons = fastgaara.extract_skeletons(labels.numpy())
+        if voxel_graph_fn is not None:
+            vcg = voxel_graph_fn(0, header.sz)
+
+        skeletons = fastgaara.extract_skeletons(labels.numpy(), vcg)
         return { 
             segid: Skeleton(vertices, edges, segid=segid, default_attributes=False)
             for segid, (vertices, edges) in skeletons.items()
@@ -577,8 +581,7 @@ def extract_skeletons_crackle(
         )
 
     skeletons = {}
-    vcg = None
-
+    
     num_chunks = int(np.ceil(header.sz / cz))
 
     loop_elapsed_sec = 0
