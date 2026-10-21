@@ -1,4 +1,5 @@
-from typing import Union, Iterable, Any
+from typing import Union, Iterable, Any, Optional
+from collections.abc import Callable
 
 import numpy as np
 import numpy.typing as npt
@@ -197,7 +198,7 @@ def skeletonize(
         return (skeletons[1], labels)
     else:
         return (skeletons, labels)
-    
+
 def thin_crackle(
     labels:Union["CrackleArray", bytes],
     binary_image:bool = False,
@@ -309,7 +310,11 @@ def thin_crackle(
 
     internal_factor = 1.5 # for thinning data structures
 
-    cz = ((memory - estimated_memory_requirement) / internal_factor / slice_memory) - 2 * padding
+    cz_slice_memory = slice_memory
+    if voxel_graph_fn is not None:
+        cz_slice_memory += 4 * sxy
+
+    cz = ((memory - estimated_memory_requirement) / internal_factor / cz_slice_memory) - 2 * padding
     cz = max(cz, 1)
     cz = min(cz, header.sz)
     cz = int(cz)
@@ -398,7 +403,7 @@ def thin_crackle(
                     max_iterations=padding,
                     return_num_deleted_points=True,
                     threads=threads,
-                    vcg=vcg,
+                    voxel_graph=vcg,
                 )
                 e = time.perf_counter()
                 if verbose > 2:
