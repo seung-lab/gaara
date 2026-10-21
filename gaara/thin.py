@@ -451,11 +451,11 @@ def thin_crackle(
         if verbose:
             print(f"points deleted: {points_deleted_this_round}")
 
-        is_finished = np.any(needs_work_next_round)
+        any_work_remaining = np.any(needs_work_next_round)
         needs_work = np.copy(needs_work_next_round)
         needs_work_next_round[:] = False
 
-        if is_finished == 0:
+        if not any_work_remaining:
             break
 
     return iterated_labels
