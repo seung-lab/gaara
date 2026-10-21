@@ -83,7 +83,6 @@ def test_skeletonize_vcg():
 	img[50:-50,:,50:-50] = 0
 
 	skel, thinned = gaara.skeletonize(img, binary_image=True)
-	skel.viewer(color_by='c')
 	assert len(skel.components()) == 1
 
 	vcg = cc3d.voxel_connectivity_graph(img)
@@ -93,7 +92,6 @@ def test_skeletonize_vcg():
 		binary_image=True,
 		voxel_graph=vcg
 	)
-	skel.viewer(color_by='c')
 	assert len(skel.components()) == 1
 
 
