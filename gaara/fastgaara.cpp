@@ -160,10 +160,13 @@ auto skeletonize_binary(
 	const bool preserve_endpoints,
 	const py::array_t<uint16_t>& anchors,
 	unsigned int threads = 1,
-	const uint32_t* vcg = nullptr
+	std::optional<
+		py::array_t<uint32_t, py::array::f_style>
+	> py_vcg = std::nullopt
 ) {
 
 	auto cpp_anchors = convert_anchors(anchors);
+	const uint32_t* vcg = py_vcg ? py_vcg->data() : nullptr;
 
 	auto skel = dispatch(labels, 
 		[&](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
