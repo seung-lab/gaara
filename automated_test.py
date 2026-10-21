@@ -73,6 +73,38 @@ def test_extract_skeleton_crackle():
 	assert np.all(skel.vertices[:,2] == np.arange(200))
 	
 
+def test_skeletonize_vcg():
+	import cc3d
+
+	sz = 200
+	img = np.zeros([200,200,200], dtype=np.uint8, order="F")	
+
+	img[20:-20,80:120,20:-20] = 1
+	img[50:-50,:,50:-50] = 0
+
+	skel, thinned = gaara.skeletonize(img, binary_image=True)
+	skel.viewer(color_by='c')
+	assert len(skel.components()) == 1
+
+	vcg = cc3d.voxel_connectivity_graph(img)
+
+	skel, thinned = gaara.skeletonize(
+		img,
+		binary_image=True,
+		voxel_graph=vcg
+	)
+	skel.viewer(color_by='c')
+	assert len(skel.components()) == 1
+
+
+
+
+
+
+
+
+
+
 
 
 
