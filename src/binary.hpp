@@ -686,9 +686,11 @@ uint64_t thin(
 
 	// cz must be >= 2 to avoid deadlocks in phase 2
 	// work lists are assigned based on thread count.
-	if (sz / threads == 0) {
+	if ((sz + threads - 1) / threads < 2) {
 		threads = std::max((unsigned int)(sz+1) / 2, (unsigned int)1);
 	}
+
+	threads = std::max(threads, 1u);
 
 	// enforce binary image starting point
 	const uint64_t voxels = sx * sy * sz;
