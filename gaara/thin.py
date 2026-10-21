@@ -338,7 +338,9 @@ def thin_crackle(
 
     compressed_chunks = [ None ] * num_chunks
     num_deleted_points = np.zeros([num_chunks], dtype=np.int64)
-    num_deleted_points_last_iter = np.zeros([num_chunks], dtype=np.int64)
+    
+    needs_work = np.ones([num_chunks], dtype=bool)
+    needs_work_next_round = np.ones([num_chunks], dtype=bool)
 
     iterated_labels = labels
     iterated_labels.parallel = threads
@@ -355,7 +357,7 @@ def thin_crackle(
             print(f"Iteration {num_iters}")
 
         for i in range(num_chunks):
-            if num_iters > 0 and num_deleted_points_last_iter[i] == 0:
+            if num_iters > 0 and needs_work[i] == False:
                 continue
 
             z = (i * cz)
@@ -393,26 +395,31 @@ def thin_crackle(
                 if verbose > 2:
                     print(f"vcg decode: {e - s:.2f}s")
 
-            if num_iters == 0 or num_deleted_points_last_iter[i] > 0:
-                s = time.perf_counter()
-                arr, N = thin(
-                    arr, 
-                    binary_image=binary_image,
-                    preserve_endpoints=preserve_endpoints,
-                    in_place=True,
-                    max_iterations=padding,
-                    return_num_deleted_points=True,
-                    threads=threads,
-                    voxel_graph=vcg,
-                )
-                e = time.perf_counter()
-                if verbose > 2:
-                    print(f"thinning: {e - s:.2f}s")
-            elif verbose > 2:
-                print("chunk fully thinned")
+            s = time.perf_counter()
+            arr, N = thin(
+                arr, 
+                binary_image=binary_image,
+                preserve_endpoints=preserve_endpoints,
+                in_place=True,
+                max_iterations=padding,
+                return_num_deleted_points=True,
+                threads=threads,
+                voxel_graph=vcg,
+            )
+            e = time.perf_counter()
+            if verbose > 2:
+                print(f"thinning: {e - s:.2f}s")
 
             vcg = None
+
+            if N > 0 and i > 0:
+                needs_work_next_round[i-1] = True
+
             num_deleted_points[i] = N
+            needs_work_next_round[i] |= (N>0)
+
+            if N > 0 and i < num_chunks - 1:
+                needs_work_next_round[i+1] = True
             
             if chunk_start != 0:
                 arr = arr[:,:,padding:]
@@ -439,13 +446,16 @@ def thin_crackle(
             if verbose:
                 print(f"saved checkpoint")
 
-        num_deleted_points_last_iter = num_deleted_points.copy()
         num_deleted_points[:] = 0
 
         if verbose:
             print(f"points deleted: {points_deleted_this_round}")
 
-        if points_deleted_this_round == 0:
+        is_finished = np.any(needs_work_next_round)
+        needs_work = np.copy(needs_work_next_round)
+        needs_work_next_round[:] = False
+
+        if is_finished == 0:
             break
 
     return iterated_labels
