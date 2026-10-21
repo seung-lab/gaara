@@ -88,12 +88,30 @@ def test_skeletonize_vcg():
 	vcg = cc3d.voxel_connectivity_graph(img)
 
 	skel, thinned = gaara.skeletonize(
-		img,
+		img.copy(),
 		binary_image=True,
 		voxel_graph=vcg
 	)
 	assert len(skel.components()) == 1
 
+	twenty_six = 0b11111111111111111111111111
+
+	lhs = 0b1 | (1 << 6) | (1 << 8) | (1 << 10) | (1 << 14) | (1 << 18) | (1 << 20) | (1 << 22) | (1 << 24)
+	lhs = ~np.uint32(lhs)
+
+	rhs = 0b10 | (1 << 7) | (1 << 9) | (1 << 11) | (1 << 15) | (1 << 19) | (1 << 21) | (1 << 23) | (1 << 25)
+	rhs = ~np.uint32(rhs)
+
+	vcg[100,:,:] = vcg[100,:,:] & lhs
+	vcg[101,:,:] = vcg[100,:,:] & rhs
+
+	skel, thinned = gaara.skeletonize(
+		img.copy(),
+		binary_image=True,
+		voxel_graph=vcg
+	)
+
+	assert len(skel.components()) == 2
 
 
 
