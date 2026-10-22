@@ -521,7 +521,8 @@ def extract_skeletons_crackle(
     header = labels.header()
     vcg = None
 
-    slice_memory = header.data_width * header.sx * header.sy 
+    sxy = header.sx * header.sy
+    slice_memory = header.data_width * sxy
     # Estimate of crackle per-slice decoding memory usage
     decoding_memory = (header.data_width + 4) * slice_memory * threads # ccl + slice 
 
@@ -557,7 +558,11 @@ def extract_skeletons_crackle(
 
     estimated_memory_requirement = decoding_memory + len(labels)
 
-    cz = ((memory - estimated_memory_requirement) / internal_factor / slice_memory)
+    cz_slice_memory = slice_memory
+    if voxel_graph_fn is not None:
+        cz_slice_memory += 4 * sxy
+
+    cz = ((memory - estimated_memory_requirement) / internal_factor / cz_slice_memory)
     cz = max(cz, 1)
     cz = min(cz, header.sz)
     cz = int(cz)
