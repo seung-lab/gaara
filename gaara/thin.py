@@ -364,7 +364,7 @@ def thin_crackle(
             if z == 0:
                 chunk_start = 0
             else:
-                chunk_start = z - padding
+                chunk_start = max(z - padding, 0)
 
             chunk_end = z + cz + padding
             chunk_end = min(header.sz, chunk_end)
