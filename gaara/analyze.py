@@ -7,6 +7,8 @@ from crackle import CrackleArray
 from osteoid import Skeleton, Bbox
 import xs3d
 
+from tqdm import tqdm
+
 try:
   import fastremap
   unique = fastremap.unique
