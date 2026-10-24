@@ -137,6 +137,72 @@ uint32_t foreground_configuration(
 	return index;
 }
 
+template <uint32_t VC_POS, uint32_t GAARA_POS>
+constexpr void apply_mask(uint32_t& index, uint32_t vc) {
+    constexpr uint32_t GAARA_MASK = 1u << GAARA_POS;
+    uint32_t bit = (vc >> VC_POS) & 1u;
+    index &= ~GAARA_MASK | (bit << GAARA_POS);
+}
+
+// graph conventions defined here and above
+// https://github.com/seung-lab/connected-components-3d/blob/3.2.0/cc3d_graphs.hpp#L73-L92
+template <typename LABEL, bool Interior>
+uint32_t foreground_configuration(
+	LABEL* labels,  const uint32_t* vcg, // voxel connectivity graph
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const uint64_t x, const uint64_t y, const uint64_t z  
+) {
+	
+	uint32_t index = foreground_configuration<LABEL, Interior>(
+		labels,
+		sx, sy, sz,
+		x, y, z
+	);
+
+	if (vcg == nullptr) {
+		return index;
+	}
+
+	const int64_t loc = x + sx * (y + sy * z);
+	const uint32_t vc = vcg[loc];
+
+	// This mapping thanks to DeepSeek's assistance with interpolating
+	// between the cc3d VCG bit position map and the Gaara bit position map
+	// defined above.
+	apply_mask< 0, 13>(index, vc);  // +x          -> (+1, 0, 0)
+	apply_mask< 1, 12>(index, vc);  // -x          -> (-1, 0, 0)
+	apply_mask< 2, 15>(index, vc);  // +y          -> ( 0,+1, 0)
+	apply_mask< 3, 10>(index, vc);  // -y          -> ( 0,-1, 0)
+	apply_mask< 4, 21>(index, vc);  // +z          -> ( 0, 0,+1)
+	apply_mask< 5,  4>(index, vc);  // -z          -> ( 0, 0,-1)
+
+	apply_mask< 6, 16>(index, vc);  // xy   (+x+y) -> (+1,+1, 0)
+	apply_mask< 7, 14>(index, vc);  // -xy  (-x+y) -> (-1,+1, 0)
+	apply_mask< 8, 11>(index, vc);  // x-y  (+x-y) -> (+1,-1, 0)
+	apply_mask< 9,  9>(index, vc);  // -x-y        -> (-1,-1, 0)
+
+	apply_mask<10, 22>(index, vc);  // xz   (+x+z) -> (+1, 0,+1)
+	apply_mask<11, 20>(index, vc);  // -xz  (-x+z) -> (-1, 0,+1)
+	apply_mask<12, 24>(index, vc);  // yz   (+y+z) -> ( 0,+1,+1)
+	apply_mask<13, 18>(index, vc);  // -yz  (-y+z) -> ( 0,-1,+1)
+
+	apply_mask<14,  5>(index, vc);  // x-z  (+x-z) -> (+1, 0,-1)
+	apply_mask<15,  3>(index, vc);  // -x-z        -> (-1, 0,-1)
+	apply_mask<16,  7>(index, vc);  // y-z  (+y-z) -> ( 0,+1,-1)
+	apply_mask<17,  1>(index, vc);  // -y-z        -> ( 0,-1,-1)
+
+	apply_mask<18, 25>(index, vc);  // xyz         -> (+1,+1,+1)
+	apply_mask<19, 23>(index, vc);  // -x+y+z      -> (-1,+1,+1)
+	apply_mask<20, 19>(index, vc);  // +x-y+z      -> (+1,-1,+1)
+	apply_mask<21, 17>(index, vc);  // -x-y+z      -> (-1,-1,+1)
+	apply_mask<22,  8>(index, vc);  // +x+y-z      -> (+1,+1,-1)
+	apply_mask<23,  6>(index, vc);  // -x+y-z      -> (-1,+1,-1)
+	apply_mask<24,  2>(index, vc);  // x-y-z (+x-y-z) -> (+1,-1,-1)
+	apply_mask<25,  0>(index, vc);  // -x-y-z      -> (-1,-1,-1)
+
+	return index;
+}
+
 template <typename LABEL>
 auto find_border_points(
 	LABEL* labels,
@@ -287,10 +353,64 @@ auto find_border_points(
 	return find_border_points(labels, sx, sy, sz, erode_border, pool);
 }
 
+// This is the voxel connectivity graph version
+// where the connectivity for each voxel is prespecified
+// which allows one to distangle autapses.
+template <typename LABEL>
+auto find_border_points(
+	LABEL* labels, const uint32_t* vcg,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	const bool erode_border,
+	GaaraThreadPool& pool
+) {
+
+	unsigned int threads = pool.num_threads();
+	std::vector<std::forward_list<Voxel>> border_points(threads);
+
+	const uint32_t twenty_six_connected = 0b11111111111111111111111111;
+
+	auto process_block = [&](
+		const unsigned int t,
+		const uint64_t xs, const uint64_t xe, 
+		const uint64_t ys, const uint64_t ye, 
+		const uint64_t zs, const uint64_t ze
+	){
+		for (uint64_t z = zs; z < ze; z++) {
+			for (uint64_t y = ys; y < ye; y++) {
+				for (uint64_t x = xs; x < xe; x++) {
+					uint64_t loc = x + sx * (y + sy * z);
+
+					if (labels[loc] && (vcg[loc] & twenty_six_connected) < twenty_six_connected) {
+						labels[loc] = PointStatus::BORDER;
+						border_points[t].emplace_front(x,y,z);
+					}
+				}
+			}
+		}
+	};
+
+	uint64_t cz = (sz + threads - 1) / threads;
+	cz = std::max(cz, (uint64_t)1);
+
+	std::vector<std::function<void(std::size_t)>> jobs;
+	jobs.reserve(threads);
+	for (int t = 0; t < threads; t++) {
+		jobs.emplace_back([&,t](size_t ignore) {
+			const uint64_t start = t * cz;
+			const uint64_t end = std::min((t+1) * cz, sz);
+			process_block(t, 0, sx, 0, sy, start, end);
+		});
+	}
+
+	pool.run_batch(jobs);
+
+	return border_points;
+}
+
 template <typename LABEL>
 uint64_t kernel(
 	ThinningDirection direction,
-	LABEL* labels, 
+	LABEL* labels, const uint32_t* vcg,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	std::vector<std::forward_list<Voxel>>& border_points,
 	std::vector<std::deque<Iterator>>& potentially_deletable,
@@ -350,8 +470,8 @@ uint64_t kernel(
 			);
 
 			const uint32_t config = interior
-				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+				? foreground_configuration<LABEL, true>(labels, vcg, sx, sy, sz, pt.x, pt.y, pt.z)
+				: foreground_configuration<LABEL, false>(labels, vcg, sx, sy, sz, pt.x, pt.y, pt.z);
 
 			// Palagyi's algorithm puts isthmus after simple, but they are 
 			// disjoint sets, so only one or zero should ever fire. I put
@@ -423,8 +543,8 @@ uint64_t kernel(
 			}
 
 			const uint32_t config = interior
-				? foreground_configuration<LABEL, true>(labels, sx, sy, sz, pt.x, pt.y, pt.z)
-				: foreground_configuration<LABEL, false>(labels, sx, sy, sz, pt.x, pt.y, pt.z);
+				? foreground_configuration<LABEL, true>(labels, vcg, sx, sy, sz, pt.x, pt.y, pt.z)
+				: foreground_configuration<LABEL, false>(labels, vcg, sx, sy, sz, pt.x, pt.y, pt.z);
 
 			if (!simple_lut[config]) {
 				if (boundary_lock.owns_lock()) {
@@ -546,7 +666,8 @@ uint64_t thin(
 	const bool preserve_endpoints = false,
 	const std::vector<Voxel> anchors = {}, 
 	const int64_t max_iterations = -1,
-	unsigned int threads = 1
+	unsigned int threads = 1,
+	const uint32_t* vcg = nullptr
 ) {
 	if (labels == nullptr) {
 		throw std::invalid_argument("Null pointer provided for data.");
@@ -565,9 +686,11 @@ uint64_t thin(
 
 	// cz must be >= 2 to avoid deadlocks in phase 2
 	// work lists are assigned based on thread count.
-	if (sz / threads == 0) {
+	if ((sz + threads - 1) / threads < 2) {
 		threads = std::max((unsigned int)(sz+1) / 2, (unsigned int)1);
 	}
+
+	threads = std::max(threads, 1u);
 
 	// enforce binary image starting point
 	const uint64_t voxels = sx * sy * sz;
@@ -576,9 +699,18 @@ uint64_t thin(
 
 	mask(labels, voxels, pool);
 
-	std::vector<std::forward_list<Voxel>> border_points = find_border_points(
-		labels, sx, sy, sz, /*erode_border=*/true, pool
-	);
+	std::vector<std::forward_list<Voxel>> border_points;
+
+	if (vcg == nullptr) {
+		border_points = find_border_points(
+			labels, sx, sy, sz, /*erode_border=*/true, pool
+		);
+	}
+	else {
+		border_points = find_border_points(
+			labels, vcg, sx, sy, sz, /*erode_border=*/true, pool
+		);
+	}
 	std::vector<std::deque<Iterator>> potentially_deletable(threads);
 
 	uint64_t number_of_deleted_points = 0;
@@ -599,12 +731,12 @@ uint64_t thin(
 
 	do {
 		number_of_deleted_points = 0;
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
-		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
-		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);		
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_Y, labels, vcg, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_Z, labels, vcg, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::PLUS_X, labels, vcg, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Z, labels, vcg, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_X, labels, vcg, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);
+		number_of_deleted_points += kernel(ThinningDirection::MINUS_Y, labels, vcg, sx, sy, sz, border_points, potentially_deletable, preserve_endpoints, threads, pool);		
 		num_iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || num_iterations < max_iterations));
 
@@ -622,10 +754,11 @@ auto skeletonize(
 	const uint64_t sx, const uint64_t sy, const uint64_t sz,
 	const bool preserve_endpoints = false,
 	const std::vector<Voxel> anchors = {},
-	unsigned int threads = 1
+	unsigned int threads = 1,
+	const uint32_t* vcg = nullptr
 ) {
-	thin(labels, sx, sy, sz, preserve_endpoints, anchors, -1, threads);
-	return gaara::postprocess::extract_skeletons(labels, sx, sy, sz)[1];
+	thin(labels, sx, sy, sz, preserve_endpoints, anchors, -1, threads, vcg);
+	return gaara::postprocess::extract_skeletons(labels, vcg, sx, sy, sz)[1];
 }
 
 };
