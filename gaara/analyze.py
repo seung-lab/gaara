@@ -201,7 +201,7 @@ def cross_sectional_area(
         slc = Bbox.from_slices(bboxes[label])
         cross_sectional_area_helper(skeletons[label], binimg, slc)
     else:
-      uniq = unique(all_labels)
+      uniq = set(unique(all_labels))
       uniq.intersection_update(set(skeletons.keys()))
       iterator = tqdm(
         uniq,
