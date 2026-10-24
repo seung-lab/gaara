@@ -197,6 +197,13 @@ def cross_sectional_area(
   else:
     skel_labels = [ skel.id for skel in skeletons ]
 
+  if hasattr(skeletons, "vertices"):
+    skel_dict = { skeletons.id: skeletons }
+  elif isinstance(skeletons, dict):
+    skel_dict = skeletons
+  else:
+    skel_dict = { skel.id: skel for skel in iter(skeletons) }
+
   try:
     xs3d.set_shape(all_labels)
 
@@ -208,7 +215,7 @@ def cross_sectional_area(
       )
       for label, binimg in iterator:
         slc = Bbox.from_slices(bboxes[label])
-        cross_sectional_area_helper(skeletons[label], binimg, slc)
+        cross_sectional_area_helper(skel_dict[label], binimg, slc)
     else:
       uniq = set(unique(all_labels))
       uniq.intersection_update(set(skel_labels))
@@ -219,16 +226,16 @@ def cross_sectional_area(
       )
       roi = Bbox([0,0,0], all_labels.shape[:3])
       for label in iterator:
-        cross_sectional_area_helper(skeletons[label], all_labels, roi, label)
+        cross_sectional_area_helper(skel_dict[label], all_labels, roi, label)
   finally:
     xs3d.clear_shape()
 
   if hasattr(skeletons, "vertices"):
     skelitr = [ skeletons ]
   elif isinstance(skeletons, dict):
-    skelitr = skeletons.values()
+    skelitr = list(skeletons.values())
   else:
-    skelitr = iter(skeletons)
+    skelitr = list(iter(skeletons))
 
   for skel in skelitr:
     if not skel.has("cross_sectional_area"):
