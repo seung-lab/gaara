@@ -188,12 +188,19 @@ def cross_sectional_area(
     skel.add_vertex_attribute("cross_sectional_area", areas)
     skel.add_vertex_attribute("cross_sectional_area_contacts", contacts)
 
+  if hasattr(skeletons, "vertices"):
+    skel_labels = [ skeletons.id ]
+  elif isinstance(skeletons, dict):
+    skel_labels = list(skel.keys())
+  else:
+    skel_labels = [ skel.id for skel in skeletons ]
+
   try:
     xs3d.set_shape(all_labels)
 
     if isinstance(all_labels, CrackleArray):
       iterator = tqdm(
-        all_labels.each(crop=True, labels=list(skeletons.keys())),
+        all_labels.each(crop=True, labels=skel_labels),
         disable=(not progress),
         desc="Cross Section Analysis Paths"
       )
@@ -202,7 +209,7 @@ def cross_sectional_area(
         cross_sectional_area_helper(skeletons[label], binimg, slc)
     else:
       uniq = set(unique(all_labels))
-      uniq.intersection_update(set(skeletons.keys()))
+      uniq.intersection_update(set(skel_labels))
       iterator = tqdm(
         uniq,
         disable=(not progress),
