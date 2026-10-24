@@ -5,6 +5,7 @@ import numpy.typing as npt
 
 from crackle import CrackleArray
 from osteoid import Skeleton, Bbox
+import xs3d
 
 try:
   import fastremap
