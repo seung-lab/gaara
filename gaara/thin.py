@@ -114,6 +114,7 @@ def skeletonize(
     preserve_endpoints:bool = False,
     anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
     radius:bool = True,
+    anisotropy:Optional[tuple[float,float,float]] = None,
     threads:int = 1,
     voxel_graph:Optional[npt.NDArray[np.uint32]] = None,
 ) -> tuple[Skeleton|dict[int,Skeleton], npt.NDArray[np.integer]]:
@@ -162,7 +163,11 @@ def skeletonize(
     dt = None
     if radius:
         import edt
-        dt = edt.edt(labels, parallel=threads)
+        dt = edt.edt(
+            labels,
+            anisotropy=anisotropy,
+            parallel=threads,
+        )
 
     orig_dtype = labels.dtype
     if labels.dtype == bool:
