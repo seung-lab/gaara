@@ -4,10 +4,14 @@ from collections.abc import Callable
 import numpy as np
 import numpy.typing as npt
 
+import crackle
+from crackle import CrackleArray
+import edt
 import osteoid
 from osteoid import Skeleton
 
 from . import fastgaara
+from . import analyze
 
 __all__ = [
     "thin",
@@ -114,7 +118,8 @@ def skeletonize(
     preserve_endpoints:bool = False,
     anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
     radius:bool = True,
-    anisotropy:Optional[tuple[float,float,float]] = None,
+    cross_section:int = 6,
+    anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
     threads:int = 1,
     voxel_graph:Optional[npt.NDArray[np.uint32]] = None,
 ) -> tuple[Skeleton|dict[int,Skeleton], npt.NDArray[np.integer]]:
@@ -132,6 +137,9 @@ def skeletonize(
         to preserve the indicated voxels.
     radius: compute the euclidean (L2) distance transfrom and assign the values
         to the "radius" parameter of the skeleton
+    cross_section: if >0, adds cross section analysis.
+        The integer is the number of points to perform average smoothing
+        over.
     threads: number of threads to use, 0 means all cores
     voxel_graph: 26-connected voxel connectivity graph based on 
         cc3d's format. This is useful for distangling autapses.
@@ -160,14 +168,8 @@ def skeletonize(
     elif not in_place:
         labels = np.copy(labels, order="F")
 
-    dt = None
-    if radius:
-        import edt
-        dt = edt.edt(
-            labels,
-            anisotropy=anisotropy,
-            parallel=threads,
-        )
+    if radius or cross_section > 0:
+        original_labels = crackle.compressa(labels, parallel=threads)
 
     orig_dtype = labels.dtype
     if labels.dtype == bool:
@@ -190,7 +192,18 @@ def skeletonize(
             for segid, (vertices, edges) in skeletons.items()
         }
 
+    # save some space before computing the edt which requires
+    # a copy + a distance transform
+    if radius or cross_section > 0:
+        labels = crackle.compressa(labels, parallel=threads)
+
     if radius:
+        dt = edt.edt(
+            original_labels.numpy(),
+            anisotropy=anisotropy,
+            parallel=threads,
+        )
+
         for skel in skeletons.values():
             verts = skel.vertices.astype(np.uint16)
             if len(verts) == 0:
@@ -198,6 +211,23 @@ def skeletonize(
 
             vradii = dt[verts[:,0], verts[:,1], verts[:, 2]]
             p = skel.add_vertex_attribute('radius', vradii)
+
+            if anisotropy != (1.0, 1.0, 1.0):
+                skel.vertices *= np.array(anisotropy, dtype=np.float32)
+
+        dt = None
+
+    if cross_section > 0:
+        print(skeletons)
+        skeletons = analyze.cross_sectional_area(
+            original_labels.numpy(),
+            skeletons,
+            anisotropy=anisotropy,
+            smoothing_window=cross_section,
+        )
+
+    if radius or cross_section > 0:
+        labels = labels.numpy()
 
     if binary_image:
         return (skeletons[1], labels)
@@ -255,8 +285,6 @@ def thin_crackle(
     import multiprocessing as mp
     import time
 
-    import crackle
-    from crackle import CrackleArray
     import fill_voids
     import psutil
 
