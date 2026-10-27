@@ -202,6 +202,7 @@ def skeletonize(
             original_labels.numpy(),
             anisotropy=anisotropy,
             parallel=threads,
+            voxel_graph=voxel_graph,
         )
 
         for skel in skeletons.values():
