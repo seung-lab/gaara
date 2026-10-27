@@ -219,7 +219,6 @@ def skeletonize(
         dt = None
 
     if cross_section > 0:
-        print(skeletons)
         skeletons = analyze.cross_sectional_area(
             original_labels.numpy(),
             skeletons,
