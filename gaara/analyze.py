@@ -196,7 +196,7 @@ def cross_sectional_area(
   if hasattr(skeletons, "vertices"):
     skel_labels = [ skeletons.id ]
   elif isinstance(skeletons, dict):
-    skel_labels = list(skel.keys())
+    skel_labels = list(skeletons.keys())
   else:
     skel_labels = [ skel.id for skel in skeletons ]
 
