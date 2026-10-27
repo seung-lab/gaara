@@ -366,13 +366,13 @@ def thin_crackle(
                 continue
 
             z = (i * cz)
-            if z == 0:
-                chunk_start = 0
-            else:
-                chunk_start = max(z - padding, 0)
+            chunk_start = max(z - padding, 0)
 
             chunk_end = z + cz + padding
             chunk_end = min(header.sz, chunk_end)
+
+            keep_start = z - chunk_start
+            keep_end = min(z + cz, header.sz) - chunk_start
 
             if verbose > 1:
                 print(f"z = {chunk_start}:{chunk_end}")
@@ -400,7 +400,10 @@ def thin_crackle(
                 if verbose > 2:
                     print(f"vcg decode: {e - s:.2f}s")
 
+            # Deletions in the padding shouldn't count so we need
+            # to establish our own count.
             s = time.perf_counter()
+            N_valid = np.count_nonzero(arr[:,:,keep_start:keep_end])
             arr, N = thin(
                 arr, 
                 binary_image=binary_image,
@@ -411,6 +414,7 @@ def thin_crackle(
                 threads=threads,
                 voxel_graph=vcg,
             )
+            N = N_valid - np.count_nonzero(arr[:,:,keep_start:keep_end])
             e = time.perf_counter()
             if verbose > 2:
                 print(f"thinning: {e - s:.2f}s")
@@ -426,11 +430,8 @@ def thin_crackle(
             if N > 0 and i < num_chunks - 1:
                 needs_work_next_round[i+1] = True
             
-            if chunk_start != 0:
-                arr = arr[:,:,padding:]
-            if chunk_end != header.sz:
-                arr = arr[:,:,:-padding]
-
+            arr = arr[:,:,keep_start:keep_end]
+            
             s = time.perf_counter()
             compressed_chunks[i] = crackle.compressa(arr, parallel=threads)
             e = time.perf_counter()
