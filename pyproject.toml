@@ -7,12 +7,13 @@ name = "gaara"
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
+    "click",
     "crackle",
+    "edt",
+    "fastmorph"
     "numpy",
     "osteoid",
-    "edt",
     "xs3d",
-    "click",
 ]
 authors = [
     { name = "William Silversmith", email = "ws9@princeton.edu" }
@@ -40,7 +41,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-big = ["crackle-codec", "fill_voids", "psutil", "tqdm", "fastmorph"]
+big = ["crackle-codec", "fill_voids", "psutil", "tqdm"]
 
 [project.urls]
 Homepage = "https://github.com/seung-lab/gaara/"

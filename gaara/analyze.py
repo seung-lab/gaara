@@ -5,6 +5,7 @@ import numpy as np
 import numpy.typing as npt
 
 from crackle import CrackleArray
+import fastmorph
 from osteoid import Skeleton, Bbox
 import xs3d
 
@@ -30,6 +31,7 @@ def cross_sectional_area(
   repair_contacts:bool = False,
   visualize_section_planes:bool = False,
   step:int = 1,
+  voxel_graph:Optional[npt.NDArray[np.uint32]] = None,
 ) -> Union[dict[int,Skeleton],list[Skeleton],Skeleton]:
   """
   Given a set of skeletons, find the cross sectional area
@@ -88,6 +90,9 @@ def cross_sectional_area(
     cross_sections = None
     if visualize_section_planes:
       cross_sections = np.zeros(binimg.shape, dtype=np.uint32, order="F")
+
+    if voxel_graph:
+      binimg = fastmorph.erode_autapses(binimg, voxel_graph)
 
     if skel.space == "physical":
       all_verts = (skel.vertices / anisotropy).round().astype(int)
