@@ -158,9 +158,6 @@ def skeletonize(
     if labels.ndim != 3:
         raise ValueError(f"This function only supports 3D images. Got: {labels.shape}")
 
-    if voxel_graph is not None and cross_section > 0:
-        raise ValueError("voxel_graph is not yet supported for cross section analysis.")
-
     if labels.size <= 1:
         return labels
 
