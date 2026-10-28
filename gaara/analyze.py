@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 from collections import defaultdict
 
 import numpy as np

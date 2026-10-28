@@ -10,7 +10,7 @@ dependencies = [
     "click",
     "crackle",
     "edt",
-    "fastmorph"
+    "fastmorph",
     "numpy",
     "osteoid",
     "xs3d",
