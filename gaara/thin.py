@@ -16,9 +16,21 @@ from . import analyze
 __all__ = [
     "thin",
     "skeletonize",
+    "extract_skeletons",
     "thin_crackle",
     "extract_skeletons_crackle",
 ]
+
+def extract_skeletons(
+    img:np.ndarray,
+    voxel_graph:Optional[npt.NDArray[np.uint32]] = None
+) -> dict[int, Skeleton]:
+    """Extract all skeletons from the thinned input array."""
+    skeletons = fastgaara.extract_skeletons(img, None)
+    return { 
+        segid: Skeleton(vertices, edges, segid=segid, default_attributes=False)
+        for segid, (vertices, edges) in skeletons.items()
+    }
 
 def thin(
     labels:npt.NDArray[np.integer],
