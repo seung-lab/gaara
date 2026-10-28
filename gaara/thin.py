@@ -596,11 +596,7 @@ def extract_skeletons_crackle(
         if voxel_graph_fn is not None:
             vcg = voxel_graph_fn(0, header.sz)
 
-        skeletons = fastgaara.extract_skeletons(labels.numpy(), vcg)
-        return { 
-            segid: Skeleton(vertices, edges, segid=segid, default_attributes=False)
-            for segid, (vertices, edges) in skeletons.items()
-        }
+        return extract_skeletons(labels.numpy(), vcg)
 
     estimated_memory_requirement = decoding_memory + len(labels)
 
@@ -664,17 +660,12 @@ def extract_skeletons_crackle(
                 print(f"vcg: {e - s:.3f}s, {vcg.size / (e-s) / 1e6:.1f} MVx/sec")
 
         s = time.perf_counter()
-        arr_skeletons = fastgaara.extract_skeletons(arr, vcg)
+        arr_skeletons = extract_skeletons(arr, vcg)
         e = time.perf_counter()
         if verbose > 2:        
             print(f"extract: {e - s:.3f}s, {arr.size / (e-s) / 1e6:.1f} MVx/sec")
         del arr
         vcg = None
-
-        arr_skeletons = { 
-            segid: Skeleton(vertices, edges, segid=segid, default_attributes=False)
-            for segid, (vertices, edges) in arr_skeletons.items()
-        }
 
         s = time.perf_counter()
         for segid in arr_skeletons.keys():
