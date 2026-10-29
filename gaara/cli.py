@@ -94,12 +94,13 @@ def thin(path, output, verbose, no_mmap, threads, checkpoint, padding, memory):
 @main.command("extract")
 @click.argument("path", type=str)
 @click.option('-o', '--output', default="gaara_skeletons", help="Directory to output skeletons into.")
-@click.option('-v', '--verbose', default=0, help="Show progress messages. 0=off, 1=progress bar, 2=timings, 3=detailed timings")
+@click.option('-v', '--verbose', is_flag=True, default=False, help="Show progress messages. 0=off, 1=progress bar, 2=timings, 3=detailed timings")
 @click.option('--no-mmap', is_flag=True, default=False, help="Disallow reading the input file with mmap. This can be important on e.g. NFS mounts.", show_default=True)
 @click.option('-t', '--threads', default=0, help="Number of threads to use.", show_default=True)
 @click.option('--memory', type=int, default=-1, help="How much memory in bytes to use.", show_default=True)
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="How much memory in bytes to use.", show_default=True)
 def extract(path, output, verbose, no_mmap, threads, memory, resolution):
+	"""Extract skeletons from a thinned image."""
 	import gaara
 
 	os.makedirs(output, exist_ok=True)
@@ -131,4 +132,6 @@ def extract(path, output, verbose, no_mmap, threads, memory, resolution):
 		skeleton.transform = transform
 		save_path = os.path.join(output, f"{segid}.ostd")
 		skeleton.save(save_path)
+		if verbose:
+			print(f"wrote: {save_path}")
 
