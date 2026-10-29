@@ -80,6 +80,7 @@ def thin(path, output, verbose, no_mmap, threads, checkpoint, padding, memory):
 		fill_holes=False,
 		checkpoints=checkpoint,
 	)
+	e = time.perf_counter()
 	if verbose:
 		print(f"Thinned in {e - s:.3f}s")
 
