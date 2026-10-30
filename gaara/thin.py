@@ -459,7 +459,7 @@ def thin_crackle(
                 binary_image=binary_image,
                 preserve_endpoints=preserve_endpoints,
                 in_place=True,
-                max_iterations=padding,
+                max_iterations=padding // 6,
                 return_num_deleted_points=True,
                 threads=threads,
                 revisit=(num_iters > 0),
