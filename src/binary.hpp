@@ -407,6 +407,57 @@ auto find_border_points(
 	return border_points;
 }
 
+// This is the version for chunked processing where
+// the final thinned version isn't returned, but an
+// intermediate state where the border voxels are already
+// marked.
+template <typename LABEL>
+auto find_border_points_revisit(
+	LABEL* labels,
+	const uint64_t sx, const uint64_t sy, const uint64_t sz,
+	GaaraThreadPool& pool
+) {
+
+	unsigned int threads = pool.num_threads();
+	std::vector<std::forward_list<Voxel>> border_points(threads);
+
+	auto process_block = [&](
+		const unsigned int t,
+		const uint64_t xs, const uint64_t xe, 
+		const uint64_t ys, const uint64_t ye, 
+		const uint64_t zs, const uint64_t ze
+	){
+		for (uint64_t z = zs; z < ze; z++) {
+			for (uint64_t y = ys; y < ye; y++) {
+				for (uint64_t x = xs; x < xe; x++) {
+					uint64_t loc = x + sx * (y + sy * z);
+
+					if (labels[loc] == PointStatus::BORDER) {
+						border_points[t].emplace_front(x,y,z);
+					}
+				}
+			}
+		}
+	};
+
+	uint64_t cz = (sz + threads - 1) / threads;
+	cz = std::max(cz, (uint64_t)1);
+
+	std::vector<std::function<void(std::size_t)>> jobs;
+	jobs.reserve(threads);
+	for (int t = 0; t < threads; t++) {
+		jobs.emplace_back([&,t](size_t ignore) {
+			const uint64_t start = t * cz;
+			const uint64_t end = std::min((t+1) * cz, sz);
+			process_block(t, 0, sx, 0, sy, start, end);
+		});
+	}
+
+	pool.run_batch(jobs);
+
+	return border_points;
+}
+
 template <typename LABEL>
 uint64_t kernel(
 	ThinningDirection direction,
@@ -667,6 +718,14 @@ uint64_t thin(
 	const std::vector<Voxel> anchors = {}, 
 	const int64_t max_iterations = -1,
 	unsigned int threads = 1,
+
+	// for chunked processing where we need to preserve border points per iteration
+	const bool revisit = false, 
+	// for chunked processing, the first iteration needs to work like normal except
+	// the final mask must be skipped.
+	const bool final_mask = true,
+
+	// for fixing "self-touches" using a voxel connectivity graph
 	const uint32_t* vcg = nullptr
 ) {
 	if (labels == nullptr) {
@@ -697,11 +756,18 @@ uint64_t thin(
 
 	GaaraThreadPool pool(threads);
 
-	mask(labels, voxels, pool);
+	if (!revisit) {
+		mask(labels, voxels, pool);
+	}
 
 	std::vector<std::forward_list<Voxel>> border_points;
 
-	if (vcg == nullptr) {
+	if (revisit) {
+		border_points = find_border_points_revisit(
+			labels, sx, sy, sz, pool
+		);
+	}
+	else if (vcg == nullptr) {
 		border_points = find_border_points(
 			labels, sx, sy, sz, /*erode_border=*/true, pool
 		);
@@ -740,7 +806,9 @@ uint64_t thin(
 		num_iterations++;
 	} while (number_of_deleted_points > 0 && (max_iterations < 0 || num_iterations < max_iterations));
 
-	mask(labels, voxels, pool);
+	if (final_mask) {
+		mask(labels, voxels, pool);
+	}
 
 	pool.join();
 

@@ -41,6 +41,8 @@ def thin(
     max_iterations:int = -1,
     return_num_deleted_points:bool = False,
     threads:int = 1,
+    revisit:bool = False,
+    final_mask:bool = True,
     voxel_graph:Optional[npt.NDArray[np.uint32]] = None,
 ) -> npt.NDArray[np.integer]:
     """
@@ -60,6 +62,14 @@ def thin(
         the second element is the number of voxels that were deleted.
     voxel_graph: 26-connected voxel connectivity graph based on 
         cc3d's format. This is useful for distangling autapses.
+
+    (internal options)
+    The following two options are for the chunked version of the algorithm
+    and are likely not useful to end users.
+
+    revisit: skip initial masking and calculate border points based by examining
+        the pre-exisitng voxel coloration.
+    final_mask: do not erase the voxel states after processing
 
     References:
 
@@ -106,6 +116,8 @@ def thin(
             anchors,
             max_iterations,
             threads,
+            revisit,
+            final_mask,
             voxel_graph
         )
     elif voxel_graph is not None:
@@ -457,6 +469,8 @@ def thin_crackle(
                 max_iterations=padding,
                 return_num_deleted_points=True,
                 threads=threads,
+                revisit=(num_iters > 0),
+                final_mask=False,
                 voxel_graph=vcg,
             )
             N = N_valid - np.count_nonzero(arr[:,:,keep_start:keep_end])
@@ -509,7 +523,9 @@ def thin_crackle(
         if not any_work_remaining:
             break
 
-    return iterated_labels
+    # b/c we are skipping final mask in thin, we need to 
+    # do the masking manually here with "> 0"
+    return iterated_labels > 0
 
 
 def extract_skeletons_crackle(
