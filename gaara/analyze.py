@@ -222,11 +222,14 @@ def cross_sectional_area(
         desc="Cross Section Analysis Paths"
       )
       for label, binimg in iterator:
+        if label == 0:
+          continue
         slc = Bbox.from_slices(bboxes[label])
         cross_sectional_area_helper(skel_dict[label], binimg, slc)
     else:
       uniq = set(unique(all_labels))
       uniq.intersection_update(set(skel_labels))
+      uniq.discard(0)
       iterator = tqdm(
         uniq,
         disable=(not progress),
