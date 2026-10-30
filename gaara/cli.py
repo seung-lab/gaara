@@ -94,7 +94,7 @@ def thin(path, output, verbose, no_mmap, threads, checkpoint, padding, memory):
 @main.command("extract")
 @click.argument("path", type=str)
 @click.option('-o', '--output', default="gaara_skeletons", help="Directory to output skeletons into.")
-@click.option('-v', '--verbose', is_flag=True, default=False, help="Show progress messages. 0=off, 1=progress bar, 2=timings, 3=detailed timings")
+@click.option('-v', '--verbose', is_flag=True, default=False, help="Show progress messages.")
 @click.option('--no-mmap', is_flag=True, default=False, help="Disallow reading the input file with mmap. This can be important on e.g. NFS mounts.", show_default=True)
 @click.option('-t', '--threads', default=0, help="Number of threads to use.", show_default=True)
 @click.option('--memory', type=int, default=-1, help="How much memory in bytes to use.", show_default=True)
@@ -112,7 +112,7 @@ def extract(path, output, verbose, no_mmap, threads, memory, resolution):
 		arr,
 		memory=int(memory),
 		threads=threads,
-    	verbose=verbose,
+    verbose=verbose,
 	)
 	e = time.perf_counter()
 	if verbose:
@@ -134,4 +134,51 @@ def extract(path, output, verbose, no_mmap, threads, memory, resolution):
 		skeleton.save(save_path)
 		if verbose:
 			print(f"wrote: {save_path}")
+
+@main.command("skeletonize")
+@click.argument("path", type=str)
+@click.option('-o', '--output', default="gaara_skeletons", help="Directory to output skeletons into.")
+@click.option('-v', '--verbose', default=0, help="Show progress messages. 0=off, 1=progress bar, 2=timings, 3=detailed timings")
+@click.option('--no-mmap', is_flag=True, default=False, help="Disallow reading the input file with mmap. This can be important on e.g. NFS mounts.", show_default=True)
+@click.option('-t', '--threads', default=0, help="Number of threads to use.", show_default=True)
+@click.option('--memory', type=int, default=-1, help="How much memory in bytes to use.", show_default=True)
+@click.option('--resolution', type=Tuple3(), default="1,1,1", help="How much memory in bytes to use.", show_default=True)
+@click.option('--radius/--no-radius', is_flag=True, default=True, help="Compute the distance to boundary.", show_default=True)
+def skeletonize(path, output, verbose, no_mmap, threads, memory, resolution, radius):
+	"""Extract skeletons from a thinned image."""
+	import gaara
+
+	os.makedirs(output, exist_ok=True)
+
+	arr = crackle.aload(path, allow_mmap=(not no_mmap))
+
+	s = time.perf_counter()
+	skeletons = gaara.skeletonize_crackle(
+		arr,
+		memory=int(memory),
+		threads=threads,
+    verbose=verbose,
+    radius=radius,
+	)
+	e = time.perf_counter()
+	if verbose:
+		print(f"Extracted in {e - s:.3f}s")
+
+	provenance = os.path.join(output, "provenance.txt")
+	with open(provenance, "wt") as f:
+		f.write(f"These skeletons were generated from {path}")
+
+	transform = np.eye(4, dtype=np.float32)
+	transform[0,0] = resolution[0]
+	transform[1,1] = resolution[1]
+	transform[2,2] = resolution[2]
+	transform = transform[:3,:]
+
+	for segid, skeleton in skeletons.items():
+		skeleton.transform = transform
+		save_path = os.path.join(output, f"{segid}.ostd")
+		skeleton.save(save_path)
+		if verbose:
+			print(f"wrote: {save_path}")
+
 
