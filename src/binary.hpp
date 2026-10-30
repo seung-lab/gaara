@@ -825,7 +825,17 @@ auto skeletonize(
 	unsigned int threads = 1,
 	const uint32_t* vcg = nullptr
 ) {
-	thin(labels, sx, sy, sz, preserve_endpoints, anchors, -1, threads, vcg);
+	thin(
+		labels, 
+		sx, sy, sz,
+		preserve_endpoints, 
+		anchors,
+		/*max_iterations=*/-1, 
+		threads,
+		/*revisit=*/false,
+		/*final_mask=*/true,
+		vcg
+	);
 	return gaara::postprocess::extract_skeletons(labels, vcg, sx, sy, sz)[1];
 }
 
