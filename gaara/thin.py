@@ -265,7 +265,7 @@ def skeletonize(
 
 def thin_crackle(
     labels:Union["CrackleArray", bytes],
-    binary_image:bool = False,
+    binary_image:bool = True,
     preserve_endpoints:bool = False,
     memory:int = -1,
     threads:int = 0,
@@ -317,6 +317,9 @@ def thin_crackle(
 
     assert padding > 0 and int(padding) == padding
     assert threads >= 0
+
+    if binary_image == False:
+        raise ValueError("multilabel chunked thinning is not yet supported.")
 
     if isinstance(labels, bytes):
         labels = CrackleArray(labels)
