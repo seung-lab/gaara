@@ -225,9 +225,6 @@ def skeletonize(
             vradii = dt[verts[:,0], verts[:,1], verts[:, 2]]
             p = skel.add_vertex_attribute('radius', vradii)
 
-            if anisotropy != (1.0, 1.0, 1.0):
-                skel.vertices *= np.array(anisotropy, dtype=np.float32)
-
         dt = None
 
     if cross_section > 0:
@@ -237,6 +234,10 @@ def skeletonize(
             anisotropy=anisotropy,
             smoothing_window=cross_section,
         )
+
+    if anisotropy != (1.0, 1.0, 1.0):
+        for skel in skeletons.values():
+            skel.vertices *= np.array(anisotropy, dtype=np.float32)
 
     if radius or cross_section > 0:
         labels = labels.numpy()
