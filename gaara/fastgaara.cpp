@@ -106,6 +106,8 @@ auto thin_binary(
 	const py::array_t<uint16_t>& anchors,
 	const int64_t max_iterations = -1,
 	unsigned int threads = 1,
+	const bool revisit = false,
+	const bool final_mask = true,
 	std::optional<
 		py::array_t<uint32_t, py::array::f_style>
 	> py_vcg = std::nullopt
@@ -124,6 +126,8 @@ auto thin_binary(
 				cpp_anchors,
 				max_iterations,
 				threads,
+				revisit,
+				final_mask,
 				vcg
 			);
 		}

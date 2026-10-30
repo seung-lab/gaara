@@ -19,6 +19,7 @@ __all__ = [
     "extract_skeletons",
     "thin_crackle",
     "extract_skeletons_crackle",
+    "skeletonize_crackle",
 ]
 
 def extract_skeletons(
@@ -41,6 +42,8 @@ def thin(
     max_iterations:int = -1,
     return_num_deleted_points:bool = False,
     threads:int = 1,
+    revisit:bool = False,
+    final_mask:bool = True,
     voxel_graph:Optional[npt.NDArray[np.uint32]] = None,
 ) -> npt.NDArray[np.integer]:
     """
@@ -60,6 +63,14 @@ def thin(
         the second element is the number of voxels that were deleted.
     voxel_graph: 26-connected voxel connectivity graph based on 
         cc3d's format. This is useful for distangling autapses.
+
+    (internal options)
+    The following two options are for the chunked version of the algorithm
+    and are likely not useful to end users.
+
+    revisit: skip initial masking and calculate border points based by examining
+        the pre-exisitng voxel coloration.
+    final_mask: do not erase the voxel states after processing
 
     References:
 
@@ -106,6 +117,8 @@ def thin(
             anchors,
             max_iterations,
             threads,
+            revisit,
+            final_mask,
             voxel_graph
         )
     elif voxel_graph is not None:
@@ -196,7 +209,7 @@ def skeletonize(
         (vertices, edges) = fastgaara.skeletonize_binary(
             labels, preserve_endpoints, anchors, threads, voxel_graph,
         )
-        skeletons = { 1: Skeleton(vertices, edges, default_attributes=False) }
+        skeletons = { 1: Skeleton(vertices, edges, default_attributes=False, segid=1) }
     elif voxel_graph is not None:
         raise NotImplementedError("voxel_graph is not yet implemented for multilabel images.")
     else:
@@ -204,7 +217,7 @@ def skeletonize(
             labels, preserve_endpoints, anchors
         )
         skeletons = { 
-            segid: Skeleton(vertices, edges, default_attributes=False) 
+            segid: Skeleton(vertices, edges, default_attributes=False, segid=segid) 
             for segid, (vertices, edges) in skeletons.items()
         }
 
@@ -253,17 +266,16 @@ def skeletonize(
 
 def thin_crackle(
     labels:Union["CrackleArray", bytes],
-    binary_image:bool = False,
+    binary_image:bool = True,
     preserve_endpoints:bool = False,
     memory:int = -1,
     threads:int = 0,
-    padding:int = 1,
+    padding:int = 6,
     verbose:int = 0,
-    fill_holes:bool = True,
     checkpoints:int = 0,
     require_chunking:bool = False,
     voxel_graph_fn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
-) -> "CrackleArray":
+) -> CrackleArray:
     """
     Apply Palagyi's 3D voxel thinning algorithm to a CrackleArray.
 
@@ -302,11 +314,13 @@ def thin_crackle(
     import multiprocessing as mp
     import time
 
-    import fill_voids
     import psutil
 
-    assert padding > 0 and int(padding) == padding
+    assert padding > 0 and int(padding) == padding and padding % 6 == 0
     assert threads >= 0
+
+    if binary_image == False:
+        raise ValueError("multilabel chunked thinning is not yet supported.")
 
     if isinstance(labels, bytes):
         labels = CrackleArray(labels)
@@ -429,14 +443,6 @@ def thin_crackle(
             if verbose > 2:
                 print(f"decompress: {e - s:.2f}s")
 
-            if fill_holes:
-                s = time.perf_counter()
-                arr = fill_voids.fill(arr, in_place=True)
-                e = time.perf_counter()
-
-                if verbose > 2:
-                    print(f"fill_voids: {e - s:.2f}s")
-
             if voxel_graph_fn is not None:
                 s = time.perf_counter()
                 vcg = voxel_graph_fn(chunk_start, chunk_end)                
@@ -454,9 +460,11 @@ def thin_crackle(
                 binary_image=binary_image,
                 preserve_endpoints=preserve_endpoints,
                 in_place=True,
-                max_iterations=padding,
+                max_iterations=padding // 6,
                 return_num_deleted_points=True,
                 threads=threads,
+                revisit=(num_iters > 0),
+                final_mask=False,
                 voxel_graph=vcg,
             )
             N = N_valid - np.count_nonzero(arr[:,:,keep_start:keep_end])
@@ -509,7 +517,9 @@ def thin_crackle(
         if not any_work_remaining:
             break
 
-    return iterated_labels
+    # b/c we are skipping final mask in thin, we need to 
+    # do the masking manually here with "> 0"
+    return iterated_labels > 0
 
 
 def extract_skeletons_crackle(
@@ -697,4 +707,71 @@ def extract_skeletons_crackle(
 
     return skeletons
 
+def skeletonize_crackle(
+    labels:Union[CrackleArray, bytes],
+    binary_image:bool = True,
+    padding:int = 6,
+    memory:int = -1,
+    preserve_endpoints:bool = False,
+    anchors:npt.NDArray[np.uint16] = np.empty((0, 3), dtype=np.uint16),
+    radius:bool = True,
+    anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
+    threads:int = 0,
+    verbose:int = 0,
+    require_chunking:bool = False,
+    voxel_graph_fn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
+) -> tuple[Skeleton, CrackleArray]:
+
+    if isinstance(labels, bytes):
+        labels = CrackleArray(labels)
+    elif not isinstance(labels, CrackleArray):
+        raise ValueError("This function only accepts type CrackleArrays.")
+
+    if not binary_image:
+        raise NotImplementedError("multilabel is not implemented yet.")
+
+    labels = labels > 0
+
+    thinned = thin_crackle(
+        labels,
+        binary_image=True,
+        preserve_endpoints=preserve_endpoints,
+        memory=memory,
+        padding=padding,
+        threads=threads,
+        verbose=verbose,
+        require_chunking=require_chunking,
+        voxel_graph_fn=voxel_graph_fn,
+    )
+
+    skeletons = extract_skeletons_crackle(
+        thinned,
+        memory=memory,
+        verbose=verbose,
+        require_chunking=require_chunking,
+        voxel_graph_fn=voxel_graph_fn,
+    )
+
+    if 1 not in skeletons:
+        return Skeleton()
+
+    skeleton = skeletons[1]
+    anisotropy = np.asarray(anisotropy, dtype=np.float32)
+    skeleton.vertices *= anisotropy
+
+    if radius:
+        from pykdtree.kdtree import KDTree
+        ptc = labels.point_cloud()[1]
+        ptc = ptc.astype(np.float32)
+        ptc[:] *= anisotropy
+        tree = KDTree(ptc)
+        radii, _ = tree.query(skeleton.vertices, k=1)
+        # regular edt is distance to bg, kdtree returns
+        # distance to contour, which is a difference of 1 
+        # can maybe improve this by taking the mean of the
+        # axial, square diagonal, and cubic directions
+        radii += np.min(anisotropy)
+        skeleton.add_vertex_attribute("radius", radii)
+
+    return skeleton
 
