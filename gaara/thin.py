@@ -764,6 +764,9 @@ def skeletonize_crackle(
         ptc[:] *= anisotropy
         tree = KDTree(ptc)
         radii, _ = tree.query(skeleton.vertices, k=1)
+        # regular edt is distance to bg, kdtree returns
+        # distance to contour, which is a difference of 1 
+        radii += np.min(anisotropy)
         skeleton.add_vertex_attribute("radius", radii)
 
     return skeleton

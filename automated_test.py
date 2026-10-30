@@ -212,6 +212,7 @@ def test_chunked_algorithm_integrity():
 		arr,
 		binary_image=True,
 		in_place=False,
+		radius=True,
 	)
 
 	arr_ckl = crackle.compressa(arr)
@@ -231,6 +232,18 @@ def test_chunked_algorithm_integrity():
 
 	assert np.all(orig_skel.vertices == ckl_skel.vertices)
 	assert np.all(orig_skel.edges == ckl_skel.edges)
+
+	ckl_skel = gaara.skeletonize_crackle(
+		arr_ckl,
+		binary_image=True,
+		memory=int(40e6),
+		threads=2,
+		require_chunking=True,
+		radius=True,
+	)
+
+	assert np.all(ckl_skel.radii == orig_skel.radii)
+
 
 
 
