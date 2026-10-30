@@ -19,6 +19,7 @@ __all__ = [
     "extract_skeletons",
     "thin_crackle",
     "extract_skeletons_crackle",
+    "skeletonize_crackle",
 ]
 
 def extract_skeletons(
@@ -759,9 +760,10 @@ def skeletonize_crackle(
     if radius:
         from pykdtree.kdtree import KDTree
         ptc = labels.point_cloud()[1]
+        ptc = ptc.astype(np.float32)
         ptc[:] *= anisotropy
         tree = KDTree(ptc)
-        radii, idx = tree.query(skeleton.vertices, k=1)
+        radii, _ = tree.query(skeleton.vertices, k=1)
         skeleton.add_vertex_attribute("radius", radii)
 
     return skeleton
