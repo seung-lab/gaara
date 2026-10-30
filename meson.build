@@ -1,7 +1,7 @@
 project(
   'fastgaara',
   'cpp', 
-  version: '0.13.1',
+  version: '0.14.0',
   default_options: ['cpp_std=c++20'],
 )
 
