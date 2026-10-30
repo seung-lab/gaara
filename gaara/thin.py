@@ -761,7 +761,7 @@ def skeletonize_crackle(
         ptc = labels.point_cloud()[1]
         ptc[:] *= anisotropy
         tree = KDTree(ptc)
-        radii, idx tree.query(skeleton.vertices, k=1)
+        radii, idx = tree.query(skeleton.vertices, k=1)
         skeleton.add_vertex_attribute("radius", radii)
 
     return skeleton
