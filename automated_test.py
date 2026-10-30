@@ -208,7 +208,11 @@ def test_chunked_algorithm_integrity():
 	arr = np.zeros([200,200,200], dtype=np.uint8, order="F")
 	arr[75:125,75:125,:] = 1
 
-	orig_skel, thinned_orig = gaara.skeletonize(arr, in_place=False)
+	orig_skel, thinned_orig = gaara.skeletonize(
+		arr,
+		binary_image=True,
+		in_place=False,
+	)
 
 	arr_ckl = crackle.compressa(arr)
 
@@ -225,17 +229,8 @@ def test_chunked_algorithm_integrity():
 
 	ckl_skel = gaara.extract_skeletons_crackle(thinned_ckl, require_chunking=True)[1]
 
-	assert orig_skel == ckl_skel
-
-
-
-
-
-
-
-
-
-
+	assert np.all(orig_skel.vertices == ckl_skel.vertices)
+	assert np.all(orig_skel.edges == ckl_skel.edges)
 
 
 
