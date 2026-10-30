@@ -710,6 +710,7 @@ def extract_skeletons_crackle(
 def skeletonize_crackle(
     labels:Union[CrackleArray, bytes],
     binary_image:bool = True,
+    padding:int = 6,
     memory:int = -1,
     preserve_endpoints:bool = False,
     anchors:npt.NDArray[np.uint16] = np.empty((0, 3), dtype=np.uint16),
@@ -736,6 +737,7 @@ def skeletonize_crackle(
         binary_image=True,
         preserve_endpoints=preserve_endpoints,
         memory=memory,
+        padding=padding,
         threads=threads,
         verbose=verbose,
         require_chunking=require_chunking,
