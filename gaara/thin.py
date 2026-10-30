@@ -316,7 +316,7 @@ def thin_crackle(
 
     import psutil
 
-    assert padding > 0 and int(padding) == padding and padding % 6 == 0
+    assert padding > 4 and int(padding) == padding
     assert threads >= 0
 
     if binary_image == False:
@@ -460,7 +460,7 @@ def thin_crackle(
                 binary_image=binary_image,
                 preserve_endpoints=preserve_endpoints,
                 in_place=True,
-                max_iterations=padding // 6,
+                max_iterations=max(1, (padding - 2) // 2),
                 return_num_deleted_points=True,
                 threads=threads,
                 revisit=(num_iters > 0),
