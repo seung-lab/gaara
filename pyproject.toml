@@ -41,7 +41,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-big = ["crackle-codec", "fill_voids", "psutil", "tqdm"]
+big = ["pykdtree", "psutil", "tqdm"]
 
 [project.urls]
 Homepage = "https://github.com/seung-lab/gaara/"

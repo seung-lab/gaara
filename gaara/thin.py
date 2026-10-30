@@ -274,7 +274,7 @@ def thin_crackle(
     checkpoints:int = 0,
     require_chunking:bool = False,
     voxel_graph_fn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
-) -> "CrackleArray":
+) -> CrackleArray:
     """
     Apply Palagyi's 3D voxel thinning algorithm to a CrackleArray.
 
@@ -706,4 +706,63 @@ def extract_skeletons_crackle(
 
     return skeletons
 
+def skeletonize_crackle(
+    labels:Union[CrackleArray, bytes],
+    binary_image:bool = True,
+    memory:int = -1,
+    preserve_endpoints:bool = False,
+    anchors:npt.NDArray[np.uint16] = np.empty((0, 3), dtype=np.uint16),
+    radius:bool = True,
+    anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
+    threads:int = 0,
+    verbose:int = 0,
+    require_chunking:bool = False,
+    voxel_graph_fn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
+) -> tuple[Skeleton, CrackleArray]:
+
+    if isinstance(labels, bytes):
+        labels = CrackleArray(labels)
+    elif not isinstance(labels, CrackleArray):
+        raise ValueError("This function only accepts type CrackleArrays.")
+
+    if not binary_image:
+        raise NotImplementedError("multilabel is not implemented yet.")
+
+    labels = labels > 0
+
+    thinned = thin_crackle(
+        labels,
+        binary_image=True,
+        preserve_endpoints=preserve_endpoints,
+        memory=memory,
+        threads=threads,
+        verbose=verbose,
+        require_chunking=require_chunking,
+        voxel_graph_fn=voxel_graph_fn,
+    )
+
+    skeletons = extract_skeletons_crackle(
+        thinned,
+        memory=memory,
+        verbose=verbose,
+        require_chunking=require_chunking,
+        voxel_graph_fn=voxel_graph_fn,
+    )
+
+    if 1 not in skeletons:
+        return Skeleton()
+
+    skeleton = skeletons[1]
+    anisotropy = np.asarray(anisotropy, dtype=np.float32)
+    skeleton.vertices *= anisotropy
+
+    if radius:
+        from pykdtree.kdtree import KDTree
+        ptc = labels.point_cloud()[1]
+        ptc[:] *= anisotropy
+        tree = KDTree(ptc)
+        radii, idx tree.query(skeleton.vertices, k=1)
+        skeleton.add_vertex_attribute("radius", radii)
+
+    return skeleton
 
