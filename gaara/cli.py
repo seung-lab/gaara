@@ -61,7 +61,7 @@ def fill_holes(path, output, verbose, no_mmap, threads):
 @click.option('--no-mmap', is_flag=True, default=False, help="Disallow reading the input file with mmap. This can be important on e.g. NFS mounts.", show_default=True)
 @click.option('-t', '--threads', default=0, help="Number of threads to use.", show_default=True)
 @click.option('--checkpoint', default=0, help="Write checkpoint files every N iterations. (0=off)", show_default=True)
-@click.option('--padding', default=1, help="How much padding to use.", show_default=True)
+@click.option('--padding', default=6, help="How much padding to use. Must be a multiple of 6.", show_default=True)
 @click.option('--memory', type=int, default=-1, help="How much memory in bytes to use.", show_default=True)
 def thin(path, output, verbose, no_mmap, threads, checkpoint, padding, memory):
 	"""Perform voxel thinning."""
@@ -144,7 +144,8 @@ def extract(path, output, verbose, no_mmap, threads, memory, resolution):
 @click.option('--memory', type=int, default=-1, help="How much memory in bytes to use.", show_default=True)
 @click.option('--resolution', type=Tuple3(), default="1,1,1", help="How much memory in bytes to use.", show_default=True)
 @click.option('--radius/--no-radius', is_flag=True, default=True, help="Compute the distance to boundary.", show_default=True)
-def skeletonize(path, output, verbose, no_mmap, threads, memory, resolution, radius):
+@click.option('--padding', default=6, help="How much padding to use. Must be a multiple of 6.", show_default=True)
+def skeletonize(path, output, verbose, no_mmap, threads, memory, resolution, radius, padding):
 	"""Extract skeletons from a thinned image."""
 	import gaara
 
@@ -157,8 +158,9 @@ def skeletonize(path, output, verbose, no_mmap, threads, memory, resolution, rad
 		arr,
 		memory=int(memory),
 		threads=threads,
-    verbose=verbose,
-    radius=radius,
+		verbose=verbose,
+		radius=radius,
+		padding=padding,
 	)
 	e = time.perf_counter()
 	if verbose:
