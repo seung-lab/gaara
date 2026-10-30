@@ -203,3 +203,39 @@ def test_skeletonize_vcg_z():
     )
     assert len(skel.components()) == 2
 
+
+def test_chunked_algorithm_integrity():
+	arr = np.zeros([200,200,200], dtype=np.uint8, order="F")
+	arr[75:125,75:125,:] = 1
+
+	orig_skel, thinned_orig = gara.skeletonize(arr, in_place=False)
+
+	arr_ckl = crackle.compressa(arr)
+
+	thinned_ckl = crackle.thin_crackle(
+		arr_ckl,
+		binary_image=True,
+		memory=int(40e6),
+		threads=2,
+		padding=6,
+		require_chunking=True,
+	)
+
+	assert np.all(thinned_orig == thinned_ckl.numpy())
+
+	ckl_skel = crackle.extract_skeletons_crackle(thinned_ckl, require_chunking=True)[1]
+
+	assert orig_skel == ckl_skel
+
+
+
+
+
+
+
+
+
+
+
+
+
