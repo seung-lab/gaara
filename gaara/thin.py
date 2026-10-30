@@ -128,7 +128,7 @@ def skeletonize(
     binary_image:bool = False,
     in_place:bool = False,
     preserve_endpoints:bool = False,
-    anchors:npt.NDArray[np.uint16] = np.array([[]], dtype=np.uint16),
+    anchors:npt.NDArray[np.uint16] = np.empty((0, 3), dtype=np.uint16),
     radius:bool = True,
     cross_section:int = 6,
     anisotropy:tuple[float,float,float] = (1.0, 1.0, 1.0),
@@ -179,6 +179,10 @@ def skeletonize(
         raise ValueError("Cannot perform an in-place operation on non-Fortran ordered data.")
     elif not in_place:
         labels = np.copy(labels, order="F")
+
+    anchors = np.asarray(anchors).astype(np.uint16, copy=False)
+    if anchors is not None and anchors.ndim != 2 and anchors.shape[1] != 3:
+        raise ValueError(f"Preserve must be an Nx3 array of voxel coordinates.")
 
     if radius or cross_section > 0:
         original_labels = crackle.compressa(labels, parallel=threads)
