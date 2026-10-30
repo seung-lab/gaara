@@ -50,7 +50,7 @@ std::vector<uint64_t> unique_vertices(const Edges& edges) {
 
 template <typename LABEL>
 Edges connected_component(
-	LABEL* field, 
+	LABEL* field, const uint32_t* vcg,
 	const size_t sx, const size_t sy, const size_t sz, 
 	const size_t source,
 	std::vector<bool>& visited
@@ -109,6 +109,10 @@ Edges connected_component(
 					if (x == 0 && y == 0 && z == 0) {
 						continue;
 					}
+					else if (vcg != nullptr && (vcg[loc] & gaara::def::vcg_mask(x,y,z)) == 0) {
+						// i.e. this neighbor is an impermissible direction
+						continue;
+					}
 
 					const int64_t neighboridx = loc + (x + sx * y + sxy * z);
 
@@ -140,7 +144,7 @@ Edges connected_component(
 template <typename LABEL>
 std::unordered_map<uint64_t, gaara::def::Skeleton> 
 extract_skeletons(
-	LABEL* labels,
+	LABEL* labels, 	const uint32_t* vcg,
 	const uint64_t sx, const uint64_t sy, const uint64_t sz
 ) {
 	const uint64_t voxels = sx * sy * sz;
@@ -163,7 +167,7 @@ extract_skeletons(
 
 		Edges component_edges = \
 			gaara::postprocess::connected_component(
-				labels,
+				labels, vcg,
 				sx, sy, sz,
 				loc,
 				visited

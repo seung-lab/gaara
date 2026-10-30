@@ -1,6 +1,7 @@
 #ifndef __GAARA_DEFINITIONS_HPP__
 #define __GAARA_DEFINITIONS_HPP__
 
+#include <concepts>
 #include <cstdio>
 #include <cstdint>
 #include <fstream>
@@ -191,6 +192,51 @@ struct TwoBitArray {
 	}
 };
 
+
+// Thank you to DeepSeek-V4.1-Flash-1017 for assembling 
+// VCG_MAPPING which I then spot verified.
+// graph conventions defined at:
+// https://github.com/seung-lab/connected-components-3d/blob/3.2.0/cc3d_graphs.hpp#L73-L92
+static constexpr uint8_t VCG_MAPPING[27] = {
+	// z = -1
+	25, // idx  0: (-1,-1,-1)  -x-y-z   -> bit 26
+	17, // idx  1: ( 0,-1,-1)  -y-z     -> bit 18
+	24, // idx  2: (+1,-1,-1)  x-y-z    -> bit 25
+	15, // idx  3: (-1, 0,-1)  -x-z     -> bit 16
+	 5, // idx  4: ( 0, 0,-1)  -z       -> bit 6
+	14, // idx  5: (+1, 0,-1)  x-z      -> bit 15
+	23, // idx  6: (-1,+1,-1)  -x+y-z   -> bit 24
+	16, // idx  7: ( 0,+1,-1)  y-z      -> bit 17
+	22, // idx  8: (+1,+1,-1)  +x+y-z   -> bit 23
+
+	// z = 0
+	 9, // idx  9: (-1,-1, 0)  -x-y     -> bit 10
+	 3, // idx 10: ( 0,-1, 0)  -y       -> bit 4
+	 8, // idx 11: (+1,-1, 0)  x-y      -> bit 9
+	 1, // idx 12: (-1, 0, 0)  -x       -> bit 2
+	26, // idx 13: ( 0, 0, 0)  origin   -> sentinel / unused
+	 0, // idx 14: (+1, 0, 0)  +x       -> bit 1
+	 7, // idx 15: (-1,+1, 0)  -xy      -> bit 8
+	 2, // idx 16: ( 0,+1, 0)  +y       -> bit 3
+	 6, // idx 17: (+1,+1, 0)  xy       -> bit 7
+
+	// z = +1
+	21, // idx 18: (-1,-1,+1)  -x-y+z   -> bit 22
+	13, // idx 19: ( 0,-1,+1)  -yz      -> bit 14
+	20, // idx 20: (+1,-1,+1)  +x-y+z   -> bit 21
+	11, // idx 21: (-1, 0,+1)  -xz      -> bit 12
+	 4, // idx 22: ( 0, 0,+1)  +z       -> bit 5
+	10, // idx 23: (+1, 0,+1)  xz       -> bit 11
+	19, // idx 24: (-1,+1,+1)  -x+y+z   -> bit 20
+	12, // idx 25: ( 0,+1,+1)  yz       -> bit 13
+	18  // idx 26: (+1,+1,+1)  xyz      -> bit 19
+};
+
+// x,y,z are -1,0,+1
+template <std::signed_integral INTEGER>
+constexpr uint32_t vcg_mask(const INTEGER x, const INTEGER y, const INTEGER z) {
+	return 1u << VCG_MAPPING[(x+1) + 3 * (y+1) + 9 * (z+1)];
+}
 
 };
 

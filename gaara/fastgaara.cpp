@@ -105,9 +105,14 @@ auto thin_binary(
 	const bool preserve_endpoints, 
 	const py::array_t<uint16_t>& anchors,
 	const int64_t max_iterations = -1,
-	unsigned int threads = 1
+	unsigned int threads = 1,
+	std::optional<
+		py::array_t<uint32_t, py::array::f_style>
+	> py_vcg = std::nullopt
 ) {
 	auto cpp_anchors = convert_anchors(anchors);
+
+	const uint32_t* vcg = py_vcg ? py_vcg->data() : nullptr;
 
 	return dispatch(labels, 
 		[&](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
@@ -118,7 +123,8 @@ auto thin_binary(
 				preserve_endpoints,
 				cpp_anchors,
 				max_iterations,
-				threads
+				threads,
+				vcg
 			);
 		}
 	);
@@ -153,10 +159,14 @@ auto skeletonize_binary(
 	const py::array& labels, 
 	const bool preserve_endpoints,
 	const py::array_t<uint16_t>& anchors,
-	unsigned int threads = 1
+	unsigned int threads = 1,
+	std::optional<
+		py::array_t<uint32_t, py::array::f_style>
+	> py_vcg = std::nullopt
 ) {
 
 	auto cpp_anchors = convert_anchors(anchors);
+	const uint32_t* vcg = py_vcg ? py_vcg->data() : nullptr;
 
 	auto skel = dispatch(labels, 
 		[&](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
@@ -166,7 +176,8 @@ auto skeletonize_binary(
 				sx, sy, sz,
 				preserve_endpoints,
 				cpp_anchors,
-				threads
+				threads,
+				vcg
 			);
 		}
 	);
@@ -216,12 +227,20 @@ auto skeletonize_multilabel(
 	return py_skeletons;
 }
 
-auto extract_skeletons(const py::array& labels) {
+auto extract_skeletons(
+	const py::array& labels,
+	std::optional<
+		py::array_t<uint32_t, py::array::f_style>
+	> py_vcg = std::nullopt
+) {
+
+	const uint32_t* vcg = py_vcg ? py_vcg->data() : nullptr;
+
 	auto skeletons = dispatch(labels, 
 		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
 			return gaara::postprocess::extract_skeletons<T>(
-				data,
+				data, vcg,
 				sx, sy, sz
 			);
 		}
