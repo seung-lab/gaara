@@ -208,7 +208,7 @@ def skeletonize(
         (vertices, edges) = fastgaara.skeletonize_binary(
             labels, preserve_endpoints, anchors, threads, voxel_graph,
         )
-        skeletons = { 1: Skeleton(vertices, edges, default_attributes=False) }
+        skeletons = { 1: Skeleton(vertices, edges, default_attributes=False, segid=1) }
     elif voxel_graph is not None:
         raise NotImplementedError("voxel_graph is not yet implemented for multilabel images.")
     else:
@@ -216,7 +216,7 @@ def skeletonize(
             labels, preserve_endpoints, anchors
         )
         skeletons = { 
-            segid: Skeleton(vertices, edges, default_attributes=False) 
+            segid: Skeleton(vertices, edges, default_attributes=False, segid=segid) 
             for segid, (vertices, edges) in skeletons.items()
         }
 
@@ -271,7 +271,6 @@ def thin_crackle(
     threads:int = 0,
     padding:int = 1,
     verbose:int = 0,
-    fill_holes:bool = True,
     checkpoints:int = 0,
     require_chunking:bool = False,
     voxel_graph_fn:Optional[Callable[[int,int], npt.NDArray[np.uint32]]] = None,
@@ -314,7 +313,6 @@ def thin_crackle(
     import multiprocessing as mp
     import time
 
-    import fill_voids
     import psutil
 
     assert padding > 0 and int(padding) == padding
@@ -440,14 +438,6 @@ def thin_crackle(
 
             if verbose > 2:
                 print(f"decompress: {e - s:.2f}s")
-
-            if fill_holes:
-                s = time.perf_counter()
-                arr = fill_voids.fill(arr, in_place=True)
-                e = time.perf_counter()
-
-                if verbose > 2:
-                    print(f"fill_voids: {e - s:.2f}s")
 
             if voxel_graph_fn is not None:
                 s = time.perf_counter()
