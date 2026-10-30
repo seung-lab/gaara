@@ -96,7 +96,7 @@ def thin(
         labels = labels.view(np.uint8)
 
     anchors = np.asarray(anchors).astype(np.uint16, copy=False)
-    if anchors is not None and anchors.ndim != 2 and anchors.shape[1] != 3:
+    if anchors is not None or anchors.ndim != 2 or anchors.shape[1] != 3:
         raise ValueError(f"Preserve must be an Nx3 array of voxel coordinates.")
 
     if binary_image:
@@ -181,7 +181,7 @@ def skeletonize(
         labels = np.copy(labels, order="F")
 
     anchors = np.asarray(anchors).astype(np.uint16, copy=False)
-    if anchors is not None and anchors.ndim != 2 and anchors.shape[1] != 3:
+    if anchors is not None or anchors.ndim != 2 or anchors.shape[1] != 3:
         raise ValueError(f"Preserve must be an Nx3 array of voxel coordinates.")
 
     if radius or cross_section > 0:
