@@ -578,14 +578,14 @@ def extract_skeletons_crackle(
         threads = mp.cpu_count()
 
     labels = labels.asfortranarray()
-    labels = CrackleArray(labels.binary, parallel=threads)
+    labels.parallel = threads
     header = labels.header()
     vcg = None
 
     sxy = header.sx * header.sy
     slice_memory = header.data_width * sxy
     # Estimate of crackle per-slice decoding memory usage
-    decoding_memory = (header.data_width + 4) * slice_memory * threads # ccl + slice 
+    decoding_memory = (header.data_width + 4) * sxy * threads # ccl + slice 
 
     system_memory = psutil.virtual_memory().total
     if memory < 0:
@@ -761,7 +761,7 @@ def skeletonize_crackle(
 
     if radius:
         from pykdtree.kdtree import KDTree
-        ptc = labels.point_cloud()[1]
+        ptc = labels.point_cloud(label=1, skip_background=True)
         ptc = ptc.astype(np.float32)
         ptc[:] *= anisotropy
         tree = KDTree(ptc)
