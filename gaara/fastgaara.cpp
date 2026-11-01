@@ -239,7 +239,7 @@ auto extract_skeletons(
 ) {
 
 	const uint32_t* vcg = py_vcg ? py_vcg->data() : nullptr;
-	const bool f_order = (arr.flags() & py::array::f_style);
+	const bool f_order = (labels.flags() & py::array::f_style);
 
 	if (!f_order) {
 		throw std::invalid_argument("labels must be F contiguous.");
