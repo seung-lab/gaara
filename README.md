@@ -84,7 +84,7 @@ Note that the Python version uses static linking using generated `.hpp` files th
 I ran gaara 0.14.0 against a 14.76 GVx uint8 fortran order binary mask using `gaara.thin(arr, binary_image=True, threads=t)` with `t` ranging from 1 to 9 inclusive on a MacBook Pro M3 with 11 cores (a mix of Performance and Efficiency cores).
 
 | Threads | Time (s) | MVx/s | Speedup |
-|---:|---:|---:|---:|---:|
+|---|--------|--------|-------|
 | 1 | 48.180 | 306.43 | 1.00× | 
 | 2 | 29.080 | 507.71 | 1.66× | 
 | 3 | 22.006 | 670.91 | 2.19× | 
