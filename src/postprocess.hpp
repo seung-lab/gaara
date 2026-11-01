@@ -48,7 +48,7 @@ std::vector<uint64_t> unique_vertices(const Edges& edges) {
 	return uniq;
 }
 
-template <typename LABEL>
+template <typename LABEL, bool F_ORDER>
 Edges connected_component(
 	LABEL* field, const uint32_t* vcg,
 	const size_t sx, const size_t sy, const size_t sz, 
@@ -63,6 +63,7 @@ Edges connected_component(
 
 	const size_t voxels = sx * sy * sz;	
 	const size_t sxy = sx * sy;
+	const size_t syz = sy * sz;
 
 	if (source >= voxels) {
 		return edges;
@@ -75,9 +76,18 @@ Edges connected_component(
 
 	std::deque<gaara::def::Voxel> stack;
 
-	uint64_t zi = source / sxy;
-	uint64_t yi = (source - zi * sxy) / sx;
-	uint64_t xi = (source - zi * sxy - yi * sx);
+	uint64_t xi, yi, zi;
+
+	if constexpr (F_ORDER) {
+		zi = source / sxy;
+		yi = (source - zi * sxy) / sx;
+		xi = (source - zi * sxy - yi * sx);		
+	}
+	else {
+		xi = source / syz;
+		yi = (source - xi * syz) / sz;
+		zi = (source - xi * syz - yi * sz);
+	}
 
 	stack.emplace_back(xi,yi,zi);
 
@@ -85,11 +95,22 @@ Edges connected_component(
 		gaara::def::Voxel point = stack.back();
 		stack.pop_back();
 		
-		const int64_t loc = (
-			  (int64_t)point.x 
-			+ (int64_t)(sx * (uint64_t)point.y)
-			+ (int64_t)(sxy * (uint64_t)point.z)
-		);
+		int64_t loc;
+
+		if constexpr (F_ORDER) {
+			loc = (
+				  (int64_t)point.x 
+				+ (int64_t)(sx * (uint64_t)point.y)
+				+ (int64_t)(sxy * (uint64_t)point.z)
+			);
+		}
+		else {
+			loc = (
+				  (int64_t)point.z 
+				+ (int64_t)(sz * (uint64_t)point.y)
+				+ (int64_t)(syz * (uint64_t)point.x)
+			);
+		}
 
 		if (visited[loc]) {
 			continue;
@@ -114,7 +135,13 @@ Edges connected_component(
 						continue;
 					}
 
-					const int64_t neighboridx = loc + (x + sx * y + sxy * z);
+					int64_t neighboridx;
+					if constexpr (F_ORDER) {
+						neighboridx = loc + (x + sx * y + sxy * z);
+					}
+					else {
+						neighboridx = loc + (z + sz * y + syz * z);
+					}
 
 					// Can't check visited here because there
 					// could be real loops in the structure that
@@ -141,7 +168,7 @@ Edges connected_component(
 	return edges;
 }
 
-template <typename LABEL>
+template <typename LABEL, bool F_ORDER>
 std::unordered_map<uint64_t, gaara::def::Skeleton> 
 extract_skeletons(
 	LABEL* labels, 	const uint32_t* vcg,
@@ -166,7 +193,7 @@ extract_skeletons(
 		}
 
 		Edges component_edges = \
-			gaara::postprocess::connected_component(
+			gaara::postprocess::connected_component<LABEL, F_ORDER>(
 				labels, vcg,
 				sx, sy, sz,
 				loc,

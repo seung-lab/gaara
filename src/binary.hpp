@@ -836,7 +836,7 @@ auto skeletonize(
 		/*final_mask=*/true,
 		vcg
 	);
-	return gaara::postprocess::extract_skeletons(labels, vcg, sx, sy, sz)[1];
+	return gaara::postprocess::extract_skeletons<LABEL, true>(labels, vcg, sx, sy, sz)[1];
 }
 
 };

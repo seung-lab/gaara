@@ -240,18 +240,28 @@ auto extract_skeletons(
 
 	const uint32_t* vcg = py_vcg ? py_vcg->data() : nullptr;
 	const bool f_order = (labels.flags() & py::array::f_style);
+	const bool c_order = (labels.flags() & py::array::c_style);
 
-	if (!f_order) {
-		throw std::invalid_argument("labels must be F contiguous.");
+	if (!f_order && !c_order) {
+		throw std::invalid_argument("labels must be contiguous memory");
 	}
 
 	auto skeletons = dispatch(labels, 
 		[=](auto *data, uint64_t sx, uint64_t sy, uint64_t sz) {
 			using T = std::remove_pointer_t<decltype(data)>;
-			return gaara::postprocess::extract_skeletons<T>(
-				data, vcg,
-				sx, sy, sz
-			);
+
+			if (f_order) {
+				return gaara::postprocess::extract_skeletons<T, true>(
+					data, vcg,
+					sx, sy, sz
+				);
+			}
+			else {
+				return gaara::postprocess::extract_skeletons<T, false>(
+					data, vcg,
+					sx, sy, sz
+				);
+			}
 		}
 	);
 
