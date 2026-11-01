@@ -53,7 +53,6 @@ result_array = gaara.thin_crackle(
     threads = 2, # Go faster, but uses more RAM and so smaller chunks sizes
     padding = 1, # Perform more thinning iterations per a chunk
     verbose = 0, # Levels: 1 (iteration info), 2 (+chunk info), 3 (+timings)
-    fill_holes = True, # by default fill holes on each chunk
 )
 
 skeletons = gaara.extract_skeletons_crackle(result_array)
