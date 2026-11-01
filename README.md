@@ -80,19 +80,21 @@ Note that the Python version uses static linking using generated `.hpp` files th
 
 ## Performance
 
-I ran gaara 0.14.0 against a 14.76 GVx uint8 fortran order binary mask using `gaara.thin(arr, binary_image=True, threads=t)` with `t` ranging from 1 to 9 inclusive on a MacBook Pro M3 with 11 cores (a mix of Performance and Efficiency cores).
+I ran gaara 0.14.0 against a 14.76 GVx uint8 fortran order binary mask using `gaara.thin(arr, binary_image=True, threads=t)` with `t` ranging from 1 to 11 inclusive on a MacBook Pro M3 with 11 cores (a mix of Performance and Efficiency cores).
 
 | Threads | Time (s) | MVx/s | Speedup |
 |---|--------|--------|-------|
-| 1 | 48.180 | 306.43 | 1.00× | 
-| 2 | 29.080 | 507.71 | 1.66× | 
-| 3 | 22.006 | 670.91 | 2.19× | 
-| 4 | 17.037 | 866.60 | 2.83× | 
-| 5 | 13.955 | 1057.93 | 3.45× |
-| 6 | 12.896 | 1144.88 | 3.74× |
-| 7 | 11.449 | 1289.53 | 4.21× |
-| 8 | 10.738 | 1374.87 | 4.49× |
-| 9 | 11.910 | 1239.67 | 4.05× |
+| 1 | 26.554 | 556.00 | 1.00x |
+| 2 | 15.371 | 960.48 | 1.73x |
+| 3 | 11.361 | 1299.53 | 2.34x |
+| 4 | 9.752 | 1513.97 | 2.72x |
+| 5 | 8.342 | 1769.80 | 3.18x |
+| 6 | 7.806 | 1891.25 | 3.40x |
+| 7 | 7.698 | 1917.86 | 3.45x |
+| 8 | 8.085 | 1826.06 | 3.28x |
+| 9 | 7.656 | 1928.53 | 3.47x |
+| 10 | 6.961 | 2120.89 | 3.81x |
+| 11 | 6.960 | 2121.38 | 3.82x |
 
 I also ran `skimage.morphology.skeletonize` using C-order input:
 
