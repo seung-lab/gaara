@@ -79,6 +79,30 @@ If you are installing from source, ensure the lookup tables have been generated 
 
 Note that the Python version uses static linking using generated `.hpp` files that is triggered by the C++ macro `GAARA_STATICALLY_LINK_LUTS`. This inflates the size of the binary by ~16MB.
 
+## Performance
+
+I ran gaara 0.14.0 against a 14.76 GVx uint8 fortran order binary mask using `gaara.thin(arr, binary_image=True, threads=t)` with `t` ranging from 1 to 9 inclusive on a MacBook Pro M3 with 11 cores (a mix of Performance and Efficiency cores).
+
+| Threads | Time (s) | MVx/s | Speedup |
+|---:|---:|---:|---:|---:|
+| 1 | 48.180 | 306.43 | 1.00× | 
+| 2 | 29.080 | 507.71 | 1.66× | 
+| 3 | 22.006 | 670.91 | 2.19× | 
+| 4 | 17.037 | 866.60 | 2.83× | 
+| 5 | 13.955 | 1057.93 | 3.45× |
+| 6 | 12.896 | 1144.88 | 3.74× |
+| 7 | 11.449 | 1289.53 | 4.21× |
+| 8 | 10.738 | 1374.87 | 4.49× |
+| 9 | 11.910 | 1239.67 | 4.05× |
+
+I also ran `skimage.morphology.skeletonize` using C-order input:
+
+```
+skimage: 743.847s, 19.85 Mvx/sec
+```
+
+Multi-label gaara will use slightly more memory (should be 1.25x the binary version for uint8 input, 1.03x for uint64 input, it uses an extra 2-bits per voxel). As of 0.14.0, it does not yet support multithreading.
+
 ## References
 
 1. K. Palágyi et al., “A Sequential 3D Thinning Algorithm and Its Medical Applications,” in Information Processing in Medical Imaging, M. F. Insana and R. M. Leahy, Eds., Berlin, Heidelberg: Springer, 2001, pp. 409–415. doi: 10.1007/3-540-45729-1_42.  
