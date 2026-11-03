@@ -77,7 +77,6 @@ def thin(path, output, verbose, no_mmap, threads, checkpoint, padding, memory):
     memory=int(memory), 
     padding=padding,
     verbose=verbose,
-    fill_holes=False,
     checkpoints=checkpoint,
   )
   e = time.perf_counter()
