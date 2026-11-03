@@ -40,6 +40,7 @@ def fill_holes(path, output, verbose, no_mmap, threads):
     return_crackle=True,
   )
   del holes
+  filled = filled.condense()
   e = time.monotonic()
 
   if verbose:
