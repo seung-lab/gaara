@@ -753,7 +753,7 @@ def skeletonize_crackle(
     )
 
     if 1 not in skeletons:
-        return Skeleton()
+        return Skeleton(), thinned
 
     skeleton = skeletons[1]
     anisotropy = np.asarray(anisotropy, dtype=np.float32)
@@ -773,5 +773,5 @@ def skeletonize_crackle(
         radii += np.min(anisotropy)
         skeleton.add_vertex_attribute("radius", radii)
 
-    return skeleton
+    return skeleton, thinned
 

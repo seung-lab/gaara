@@ -154,9 +154,10 @@ def skeletonize(path, output, verbose, no_mmap, threads, memory, resolution, rad
   arr = crackle.aload(path, allow_mmap=(not no_mmap))
 
   s = time.perf_counter()
-  skeletons = gaara.skeletonize_crackle(
+  skeleton, thinned = gaara.skeletonize_crackle(
     arr,
     memory=int(memory),
+    binary_image=True,
     threads=threads,
     verbose=verbose,
     radius=radius,
@@ -176,11 +177,10 @@ def skeletonize(path, output, verbose, no_mmap, threads, memory, resolution, rad
   transform[2,2] = resolution[2]
   transform = transform[:3,:]
 
-  for segid, skeleton in skeletons.items():
-    skeleton.transform = transform
-    save_path = os.path.join(output, f"{segid}.ostd")
-    skeleton.save(save_path)
-    if verbose:
-      print(f"wrote: {save_path}")
+  skeleton.transform = transform
+  save_path = os.path.join(output, f"{segid}.ostd")
+  skeleton.save(save_path)
+  if verbose:
+    print(f"wrote: {save_path}")
 
 
