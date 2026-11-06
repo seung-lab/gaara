@@ -493,7 +493,8 @@ def thin_crackle(
                 print(f"compress: {e - s:.2f}s")
             del arr
 
-        iterated_labels = CrackleArray(crackle.zstack(compressed_chunks))
+        # We just made this, so no need to worry about disk bit-rot
+        iterated_labels = CrackleArray(crackle.zstack(compressed_chunks), verify=False)
         iterated_labels.parallel = threads
         
         points_deleted_this_round = np.sum(num_deleted_points)
