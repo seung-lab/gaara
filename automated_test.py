@@ -233,7 +233,7 @@ def test_chunked_algorithm_integrity():
 	assert np.all(orig_skel.vertices == ckl_skel.vertices)
 	assert np.all(orig_skel.edges == ckl_skel.edges)
 
-	ckl_skel = gaara.skeletonize_crackle(
+	ckl_skel, thinned = gaara.skeletonize_crackle(
 		arr_ckl,
 		binary_image=True,
 		memory=int(40e6),
