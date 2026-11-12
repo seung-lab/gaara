@@ -104,6 +104,8 @@ skimage: 743.847s, 19.85 Mvx/sec
 
 Multi-label gaara will use slightly more memory (should be 1.25x the binary version for uint8 input, 1.03x for uint64 input, it uses an extra 2-bits per voxel). As of 0.14.0, it does not yet support multithreading.
 
+I ran `gaara` on a 512<sup>3</sup> uint32 volume `connectomics.ckl` derived from an early automatic segmentation of mouse visual cortex. This processed on a Macbook M1 Pro (2021) in 255.8 seconds (0.525 MVx/sec) across 2524 labels, which isn't terrible because if you extrapolate the single threaded binary value of 556 MVx/sec across 2524 labels on the faster M3 chip, you get 0.220 MVx/sec. Kimimaro processes the same volume in 187 seconds (0.717 MVx/sec) on the same chip.
+
 ## References
 
 1. K. Palágyi et al., “A Sequential 3D Thinning Algorithm and Its Medical Applications,” in Information Processing in Medical Imaging, M. F. Insana and R. M. Leahy, Eds., Berlin, Heidelberg: Springer, 2001, pp. 409–415. doi: 10.1007/3-540-45729-1_42.  
