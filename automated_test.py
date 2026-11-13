@@ -1,7 +1,8 @@
-import numpy as np
-import gaara
-import pytest
 import crackle
+import gaara
+import numpy as np
+import osteoid
+import pytest
 
 @pytest.mark.parametrize("binary_image", [True, False])
 def test_thin(binary_image):
@@ -245,5 +246,14 @@ def test_chunked_algorithm_integrity():
 	assert np.all(ckl_skel.radii == orig_skel.radii)
 
 
+def test_cross_sectional_area_runs():
+	arr = np.ones([200,200,200], dtype=np.uint8, order="F")
+	
+	vertices = np.array([[100,100,100], [101,100,100]], dtype=np.float32)
+	edges = np.array([[0,1]], dtype=np.uint32)
 
+	skel = osteoid.Skeleton(vertices, edges, segid=1)
+	skel = gaara.cross_sectional_area(arr, skel)
+
+	assert np.all(skel.cross_sectional_area == np.array([40000, 40000]))
 
