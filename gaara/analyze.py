@@ -216,6 +216,7 @@ def cross_sectional_area(
     xs3d.set_shape(all_labels)
 
     if isinstance(all_labels, CrackleArray):
+      bboxes = all_labels.bounding_boxes()
       iterator = tqdm(
         all_labels.each(crop=True, labels=skel_labels),
         disable=(not progress),
