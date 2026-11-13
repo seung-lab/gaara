@@ -254,6 +254,8 @@ def test_cross_sectional_area_runs():
 
 	skel = osteoid.Skeleton(vertices, edges, segid=1)
 	skel = gaara.cross_sectional_area(arr, skel)
-
 	assert np.all(skel.cross_sectional_area == np.array([40000, 40000]))
 
+	arr = crackle.compressa(arr)
+	skel = gaara.cross_sectional_area(arr, skel)
+	assert np.all(skel.cross_sectional_area == np.array([40000, 40000]))
