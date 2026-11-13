@@ -117,7 +117,7 @@ def cross_sectional_area(
 
     paths = skel.paths()
 
-    normal = np.array([1,0,0], dtype=np.float32)
+    normal = np.array([1,0,0], dtype=np.float32) * anisotropy
 
     shape = np.array(binimg.shape)
 
@@ -126,7 +126,7 @@ def cross_sectional_area(
         path = (path / anisotropy).round().astype(int)
       path -= roi.minpt
 
-      normals = (path[1:] - path[:-1]).astype(np.float32)
+      normals = (path[1:] - path[:-1]).astype(np.float32) * anisotropy
       normals = np.concatenate([ normals, [normals[-1]] ])
 
       # Running the filter in the forward and then backwards
