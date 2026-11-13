@@ -254,7 +254,7 @@ def cross_sectional_area(
       xs_area = np.full(len(skel.vertices), -1, dtype=np.float32, order="F")
       skel.add_vertex_attribute("cross_sectional_area", xs_area)
     if not skel.has("cross_sectional_area_contacts"):
-      xs_area = np.full(len(skel.vertices), -1, dtype=np.uint8, order="F")
+      xs_area = np.full(len(skel.vertices), 0xff, dtype=np.uint8, order="F")
       skel.add_vertex_attribute("cross_sectional_area_contacts", xs_area)
 
   return skeletons
