@@ -260,7 +260,7 @@ def cross_sectional_area(
   return skeletons
 
 # From SO: https://stackoverflow.com/questions/14313510/how-to-calculate-rolling-moving-average-using-python-numpy-scipy
-def moving_average(a:np.ndarray, n:int, mode:str = "symmetric") -> np.ndarray:
+def moving_average(a:np.ndarray, n:int, mode:str = "reflect") -> np.ndarray:
   if n <= 0:
     raise ValueError(f"Window size ({n}), must be >= 1.")
   elif n == 1:
